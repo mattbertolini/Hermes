@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hermes - GWT Server-side I18N Library
+  Copyright (C) 2011  Matt Bertolini
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+-->
+<project name="hermes" basedir="." default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
+	<property file="build.properties"/>
+	
+    <path id="classpath.default">
+        <fileset dir="${lib.dir}/default"/>
+    </path>
+	
+    <path id="classpath.test">
+        <path refid="classpath.default"/>
+        <fileset dir="${lib.dir}/test"/>
+        <pathelement location="${build.instrumentedclasses.dir}"/>
+        <pathelement location="${build.testclasses.dir}"/>
+    </path>
+	
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    	<delete dir="${dist.dir}"/>
+    </target>
+
+	<target name="init" depends="clean">
+		<mkdir dir="${lib.dir}"/>
+		<mkdir dir="${build.classes.dir}"/>
+		<mkdir dir="${build.testclasses.dir}"/>
+		<mkdir dir="${build.instrumentedclasses.dir}"/>
+		<mkdir dir="${build.javadoc.dir}"/>
+		<mkdir dir="${build.reports.dependency.dir}"/>
+		<mkdir dir="${build.reports.unittest.dir}"/>
+		<mkdir dir="${build.reports.coverage.dir}"/>
+		<mkdir dir="${dist.dir}"/>
+	</target>
+	
+	<target name="retrieve" depends="init">
+		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision].[ext]" sync="true"/>
+		<ivy:report todir="${build.reports.dependency.dir}"/>
+	</target>
+	
+    <target name="compile" depends="retrieve">
+        <javac srcdir="${src.dir}" destdir="${build.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false">
+            <classpath refid="classpath.default"/>
+        </javac>
+    </target>
+	
+   <target name="compile-instrumented" depends="retrieve">
+        <javac srcdir="${src.dir}" destdir="${build.instrumentedclasses.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+            <classpath refid="classpath.default"/>
+        </javac>
+    </target>
+	
+    <target name="compile-tests" depends="compile-instrumented">
+        <javac srcdir="${test.dir}" destdir="${build.testclasses.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false">
+            <classpath refid="classpath.test"/>
+        </javac>
+        <copy todir="${build.dir}/testclasses/">
+            <fileset dir="${test.dir}">
+                <include name="**/*.properties"/>
+            </fileset>
+        </copy>
+    </target>
+	
+    <target name="test" depends="compile-tests">
+        <taskdef resource="emma_ant.properties" classpathref="classpath.test"/>
+        
+        <emma enabled="true">
+            <instr instrpath="${build.instrumentedclasses.dir}" destdir="${build.instrumentedclasses.dir}" mode="overwrite" metadatafile="${build.reports.coverage.dir}/metadata.emma" merge="true"/>
+        </emma>
+    	
+    	<junit haltonerror="false" haltonfailure="false" printsummary="true" errorproperty="test.failed" failureproperty="test.failed">
+            <classpath refid="classpath.test"/>
+            <formatter type="xml"/>
+            <batchtest fork="true" todir="${build.reports.unittest.dir}">
+                <fileset dir="${build.testclasses.dir}">
+                    <include name="**/*Test.class"/>
+                </fileset>
+            </batchtest>
+            <jvmarg value="-Demma.coverage.out.file=${build.reports.coverage.dir}/coverage.emma"/>
+            <jvmarg value="-Demma.coverage.out.merge=true"/>
+        </junit>
+    	
+        <junitreport todir="${build.reports.unittest.dir}">
+            <fileset dir="${build.reports.unittest.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${build.reports.unittest.dir}"/>
+        </junitreport>
+    	
+        <emma enabled="true">
+            <report sourcepath="${src.dir}">
+                <fileset dir="${build.reports.coverage.dir}">
+                    <include name="*.emma"/>
+                </fileset>
+                <html outfile="${build.reports.coverage.dir}/coverage.html"/>
+            </report>
+        </emma>
+        <fail if="test.failed">One or more unit tests failed/errored. Check ${build.reports.unittest.dir} for details.</fail>
+    </target>
+	
+    <target name="javadoc" depends="retrieve">
+        <javadoc destdir="${build.javadoc.dir}" sourcepath="${src.dir}" classpathref="classpath.default" failonerror="true" windowtitle="${project.javadoc.title}">
+            <doctitle>${project.javadoc.title}</doctitle>
+            <link href="http://download.oracle.com/javase/6/docs/api/"/>
+            <link href="http://google-web-toolkit.googlecode.com/svn/javadoc/2.1/"/>
+            <link href="http://icu-project.org/apiref/icu4j/"/>
+        </javadoc>
+    </target>
+	
+	<target name="jar" depends="compile,test">
+        <tstamp>
+            <format property="build-date" pattern="yyyy-MM-dd"/>
+        </tstamp>
+        <jar destfile="${dist.dir}/${project.filename.jar}" basedir="${build.classes.dir}">
+        	<manifest>
+                <attribute name="Specification-Title" value="${project.name}" />
+                <attribute name="Specification-Version" value="${project.version}" />
+                <attribute name="Specification-Vendor" value="${project.vendor}" />
+                <attribute name="Implementation-Title" value="${project.name}" />
+                <attribute name="Implementation-Version" value="${project.version}" />
+                <attribute name="Implementation-Vendor" value="${project.vendor}" />
+                <attribute name="Build-Date" value="${build-date}" />
+                <attribute name="Sealed" value="false" />
+            </manifest>
+    	</jar>
+    </target>
+	
+    <target name="jar-javadoc" depends="javadoc">
+        <jar destfile="${dist.dir}/${project.filename.jar.javadoc}" basedir="${build.javadoc.dir}"/>
+    </target>
+
+    <target name="jar-sources">
+        <jar destfile="${dist.dir}/${project.filename.jar.sources}" basedir="${src.dir}"/>
+    </target>
+	
+	<target name="archive-bin" depends="jar,jar-javadoc,jar-sources">
+        <fileset id="bin-fileset" dir="${dist.dir}">
+            <include name="${project.filename.jar}"/>
+            <include name="${project.filename.jar.javadoc}"/>
+            <include name="${project.filename.jar.sources}"/>
+        </fileset>
+        <zipfileset id="bin-javadoc-fileset" dir="${build.javadoc.dir}" prefix="apidocs"/>
+        <zip destfile="${dist.dir}/${project.filename.bin}.zip">
+            <fileset refid="bin-fileset" />
+            <zipfileset refid="bin-javadoc-fileset"/>
+        </zip>
+        <tar destfile="${dist.dir}/${project.filename.bin}.tar">
+            <fileset refid="bin-fileset"/>
+            <zipfileset refid="bin-javadoc-fileset"/>
+        </tar>
+        <gzip src="${dist.dir}/${project.filename.bin}.tar" destfile="${dist.dir}/${project.filename.bin}.tar.gz"/>
+        <delete file="${dist.dir}/${project.filename.bin}.tar"/>
+    </target>
+
+    <target name="archive-project" depends="init">
+        <fileset id="project-fileset" dir="." defaultexcludes="true">
+            <exclude name="**/.git/" />
+            <exclude name="**/.gitignore" />
+            <exclude name="**/*.project" />
+            <exclude name="**/*.classpath" />
+            <exclude name="**/.settings/" />
+            <exclude name="**/lib/" />
+            <exclude name="**/bin/" />
+            <exclude name="**/build/" />
+            <exclude name="**/dist/" />
+        </fileset>
+        <zip destfile="${dist.dir}/${project.filename.src}.zip">
+            <fileset refid="project-fileset"/>
+        </zip>
+        <tar destfile="${dist.dir}/${project.filename.src}.tar">
+            <fileset refid="project-fileset"/>
+        </tar>
+        <gzip src="${dist.dir}/${project.filename.src}.tar" destfile="${dist.dir}/${project.filename.src}.tar.gz"/>
+        <delete file="${dist.dir}/${project.filename.src}.tar"/>
+    </target>
+
+    <target name="build" depends="archive-bin,archive-project" description="Runs full build."/>
+</project>

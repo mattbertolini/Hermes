@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hermes - GWT Server-side I18N Library
+  Copyright (C) 2011  Matt Bertolini
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+-->
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info organisation="com.mattbertolini" module="hermes" status="integration">
+        <license name="GNU Lesser General Public License 2.1" url="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
+        <ivyauthor name="Matt Bertolini"/>
+        <description>GWT Server-side I18N Library</description>
+    </info>
+    <configurations>
+        <conf name="core"/>
+        <conf name="default" extends="core"/>
+        <conf name="test"/>
+        <conf name="source"/>
+    </configurations>
+    <dependencies>
+        <dependency org="com.google.gwt" name="gwt-servlet" rev="2.1.0" conf="default"/>
+        <dependency org="com.ibm.icu" name="icu4j" rev="4.6" conf="default"/>
+        <dependency org="junit" name="junit" rev="4.8.2" conf="test->default"/>
+        <dependency org="emma" name="emma" rev="2.1.5320" conf="test->default"/>
+        <dependency org="emma" name="emma_ant" rev="2.1.5320" conf="test->default"/>
+    </dependencies>
+</ivy-module>
