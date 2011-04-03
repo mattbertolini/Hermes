@@ -47,6 +47,19 @@ public class Hermes {
     
     private static Map<String, Object> cache = new HashMap<String, Object>();
     
+    /**
+     * For a given interface and locale ,retrieves the GWT i18n interface as a 
+     * dynamic proxy for use on the server-side. If no locale is given, the 
+     * default properties file will be loaded. This method caches proxy classes 
+     * that it has created so it is safe to call multiple times.
+     * 
+     * @param clazz The GWT i18n interface to get the proxy for.
+     * @param lang The IETF language tag for the locale being requested.
+     * @return A dynamic proxy representing the given GWT i18n interface and 
+     * locale.
+     * @throws IOException If an error occurs finding, opening, or reading the 
+     * GWT properties file associated with the given interface.
+     */
     @SuppressWarnings("unchecked")
     public static <T> T get(Class<T> clazz, String lang) throws IOException {
         if(clazz == null) {
