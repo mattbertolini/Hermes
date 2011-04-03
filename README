@@ -7,8 +7,8 @@ About Hermes
 Hermes gives developers using GWT the ability to use their I18N properties files 
 on the server-side. This library is a fork of the gwt-i18n-server project 
 located at http://code.google.com/p/gwt-i18n-server/. Hermes supports the 
-Messages, Constants, and ConstantsWithLookup interfaces. Date and number 
-formatting and Plural forms are supported on the Messages interfaces.
+Messages, Constants, and ConstantsWithLookup interfaces. SafeHtml, Date and 
+number formatting, and Plural forms are supported on the Messages interfaces.
 
 License
 =======
@@ -19,7 +19,17 @@ LICENSE file for full license information.
 Requirements
 ============
 
-Hermes requires a Java 1.6, GWT 2.1, and ICU 4.6 to run.
+Hermes requires Java 1.6, GWT 2.1, and ICU 4.6 to run.
+
+Differences Between Hermes and GWT I18N
+=======================================
+
+* Since the server side does not have access to the GWT locale information, you 
+  are required to pass the locale to Hermes in order to get the correct data.
+
+* The locale hierarchy and fallback system as described in the GWT Constants 
+  Javadoc is not supported. The locale given to Hermes must match a valid 
+  properties file or it will use the default properties file.
 
 Frequently Asked Questions
 ==========================
