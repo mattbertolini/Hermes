@@ -32,15 +32,21 @@ import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
 public class MessagesProxyTest {
+    private static final TimeZone TEST_TIME_ZONE = TimeZone.getTimeZone("America/New_York");
+    
     private MessagesProxyTestData testData;
+    private TimeZone originalTimeZone;
     
     @Before
     public void setUp() throws Exception {
         this.testData = Hermes.get(MessagesProxyTestData.class, "en_US");
+        this.originalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TEST_TIME_ZONE);
     }
 
     @After
     public void tearDown() throws Exception {
+        TimeZone.setDefault(this.originalTimeZone);
     }
     
     @Test
@@ -117,7 +123,7 @@ public class MessagesProxyTest {
     @Test
     public void testMessageWithDateFormattedArgument() {
         String expected = "Default date format for locale. The date is Saturday, March 26, 2011.";
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
+        Calendar cal = Calendar.getInstance(TEST_TIME_ZONE);
         cal.set(Calendar.YEAR, 2011);
         cal.set(Calendar.MONTH, Calendar.MARCH);
         cal.set(Calendar.DAY_OF_MONTH, 26);
@@ -131,7 +137,7 @@ public class MessagesProxyTest {
     @Test
     public void testMessageWithCustomDateFormattedArgument() {
         String expected = "Custom date format. The date is 2011-03-26 21:25:00.";
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
+        Calendar cal = Calendar.getInstance(TEST_TIME_ZONE);
         cal.set(Calendar.YEAR, 2011);
         cal.set(Calendar.MONTH, Calendar.MARCH);
         cal.set(Calendar.DAY_OF_MONTH, 26);
