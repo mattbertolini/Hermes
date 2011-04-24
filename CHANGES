@@ -1,0 +1,12 @@
+Hermes Change Log
+=================
+
+Version 1.0.0 -- 2011-04-02
+-------------------------------------------------------------------------------
+Features:
+* Initial release of Hermes
+* Supports GWT version 2.1
+* Support for Messages, Constants, and ConstantsWithLookup interfaces
+* UTF-8 properties file support
+* Basic plural form support
+* SafeHtml support
