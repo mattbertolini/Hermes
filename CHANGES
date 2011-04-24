@@ -1,6 +1,16 @@
 Hermes Change Log
 =================
 
+Version 1.1.0 -- 2011-04-24
+-------------------------------------------------------------------------------
+Features:
+* Support for custom plural forms via the GWT PluralRule interface. This 
+  follows the specification and documentation found in the GWT plural forms 
+  documentation.
+Bug Fixes:
+* Fixed bug in unit test MessagesProxyTest where date related tests would fail 
+  if run outside the America/New_York time zone (Issue #1).
+
 Version 1.0.0 -- 2011-04-02
 -------------------------------------------------------------------------------
 Features:
