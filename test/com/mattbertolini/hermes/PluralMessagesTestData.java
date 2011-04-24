@@ -31,4 +31,13 @@ public interface PluralMessagesTestData extends Messages {
     String PluralMessageDefaultMessages(@PluralCount int count);
     String PluralMessageIntParam(@PluralCount int count);
     String PluralMessageShortParam(@PluralCount short count);
+    
+    String PluralMessageWithCustomRule(@PluralCount(CustomPluralRule.class) int count);
+    
+    @DefaultMessage("You have {0,number} custom items in your cart.")
+    @PluralText({"one", "You have one custom item in your cart.",
+                 "custom", "You have forty-two custom items in your cart."})
+    String PluralMessageCustomRuleDefault(@PluralCount(CustomPluralRule.class) int count);
+    
+    String PluralMessageWithCustomRuleNoDefaultConstructor(@PluralCount(NoDefaultConstructorPluralRule.class) int count);
 }

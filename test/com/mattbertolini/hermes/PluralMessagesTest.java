@@ -285,4 +285,73 @@ public class PluralMessagesTest {
         String otherActual = testData.PluralMessageDefaultMessages(101);
         Assert.assertEquals(otherExcepted, otherActual);
     }
+    
+    @Test
+    public void testPluralMessageWithCustomRuleEnglish() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        
+        String oneExpected = "There is one custom item in your cart.";
+        String oneActual = testData.PluralMessageWithCustomRule(1);
+        Assert.assertEquals(oneExpected, oneActual);
+        
+        String twoExpected = "There are 2 custom items in your cart.";
+        String twoActual = testData.PluralMessageWithCustomRule(2);
+        Assert.assertEquals(twoExpected, twoActual);
+        
+        String customExpected = "There are forty-two custom items in your cart.";
+        String customActual = testData.PluralMessageWithCustomRule(42);
+        Assert.assertEquals(customExpected, customActual);
+        
+        String otherExpected = "There are 24 custom items in your cart.";
+        String otherActual = testData.PluralMessageWithCustomRule(24);
+        Assert.assertEquals(otherExpected, otherActual);
+    }
+    
+    @Test
+    public void testPluralMessageWithCustomRuleFrench() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "fr");
+        
+        String oneExpected = "[fr] There is one custom item in your cart.";
+        String oneActual = testData.PluralMessageWithCustomRule(1);
+        Assert.assertEquals(oneExpected, oneActual);
+        
+        String twoExpected = "[fr] There are 2 custom items in your cart.";
+        String twoActual = testData.PluralMessageWithCustomRule(2);
+        Assert.assertEquals(twoExpected, twoActual);
+        
+        String customExpected = "[fr] There are twenty-four custom items in your cart.";
+        String customActual = testData.PluralMessageWithCustomRule(24);
+        Assert.assertEquals(customExpected, customActual);
+        
+        String otherExpected = "[fr] There are 42 custom items in your cart.";
+        String otherActual = testData.PluralMessageWithCustomRule(42);
+        Assert.assertEquals(otherExpected, otherActual);
+    }
+    
+    @Test(expected = RuntimeException.class)
+    public void testPluralMessageWithCustomRuleNoDefaultConstructor() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        testData.PluralMessageWithCustomRuleNoDefaultConstructor(42);
+    }
+    
+    @Test
+    public void testPluralMessageCustomRuleDefault() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        
+        String oneExpected = "You have one custom item in your cart.";
+        String oneActual = testData.PluralMessageCustomRuleDefault(1);
+        Assert.assertEquals(oneExpected, oneActual);
+        
+        String twoExpected = "You have 2 custom items in your cart.";
+        String twoActual = testData.PluralMessageCustomRuleDefault(2);
+        Assert.assertEquals(twoExpected, twoActual);
+        
+        String customExpected = "You have forty-two custom items in your cart.";
+        String customActual = testData.PluralMessageCustomRuleDefault(42);
+        Assert.assertEquals(customExpected, customActual);
+        
+        String otherExpected = "You have 24 custom items in your cart.";
+        String otherActual = testData.PluralMessageCustomRuleDefault(24);
+        Assert.assertEquals(otherExpected, otherActual);
+    }
 }

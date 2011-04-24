@@ -22,14 +22,13 @@ package com.mattbertolini.hermes;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
 import com.google.gwt.i18n.client.Messages.PluralCount;
-import com.google.gwt.i18n.client.Messages.PluralText;
+import com.google.gwt.i18n.client.PluralRule;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.ibm.icu.text.MessageFormat;
@@ -64,6 +63,8 @@ public class MessagesProxy extends AbstractI18nProxy {
         
         boolean hasPluralArgument = false;
         int pluralArgumentIndex = -1;
+        boolean hasCustomPluralRules = false;
+        PluralRule customRule = null;
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         Class<?>[] parameterTypes = method.getParameterTypes();
         for(int i = 0; i < parameterTypes.length; i++) {
@@ -77,6 +78,13 @@ public class MessagesProxy extends AbstractI18nProxy {
                                 || Short.class.isAssignableFrom(type))) {
                     hasPluralArgument = true;
                     pluralArgumentIndex = i;
+                    // Check for a custom plural rule.
+                    PluralCount pc = (PluralCount) annotation;
+                    Class<? extends PluralRule> pluralRuleClass = pc.value();
+                    if(!pluralRuleClass.isInterface() && PluralRule.class.isAssignableFrom(pluralRuleClass)) {
+                        customRule = this.instantiateCustomPluralRuleClass(pluralRuleClass);
+                        hasCustomPluralRules = true;
+                    }
                     break;
                 }
             }
@@ -88,11 +96,17 @@ public class MessagesProxy extends AbstractI18nProxy {
         String pattern;
         if(hasPluralArgument) {
             Number num = (Number) args[pluralArgumentIndex];
-            Plural plural = Plural.fromNumber(this.pluralRules, num.doubleValue());
-            String patternName = plural.buildPatternName(messageName);
+            String patternName = null;
+            Plural plural = null;
+            if(hasCustomPluralRules) {
+                plural = CustomPlural.fromNumber(customRule, num.intValue());
+            } else {
+                plural = GwtPlural.fromNumber(this.pluralRules, num.doubleValue());
+            }
+            patternName = plural.buildPatternName(messageName);
             pattern = this.getProperties().getProperty(patternName);
             if(pattern == null) {
-                Map<Plural, String> defaultValues = this.buildDefaultPluralValueMap(method);
+                Map<Plural, String> defaultValues = plural.buildDefaultPluralValueMap(method);
                 pattern = defaultValues.get(plural);
             }
         } else {
@@ -138,21 +152,22 @@ public class MessagesProxy extends AbstractI18nProxy {
         return retVal;
     }
     
-    private Map<Plural, String> buildDefaultPluralValueMap(Method method) {
-        PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
-        Map<Plural, String> defaultValues = null;
-        if(pluralTextAnnotation != null) {
-            String[] values = pluralTextAnnotation.value();
-            defaultValues = new HashMap<Plural, String>();
-            for(int i = 0; i < values.length; i += 2) {
-                Plural key = Plural.fromGwtValue(values[i]);
-                defaultValues.put(key, values[i + 1]);
+    private PluralRule instantiateCustomPluralRuleClass(Class<? extends PluralRule> clazz) {
+        PluralRule retVal = null;
+        try {
+            String pluralClassName = clazz.getName() + "_" + this.getLocale().getLanguage();
+            try {
+                Class<?> pClass = Class.forName(pluralClassName);
+                retVal = (PluralRule) pClass.newInstance();
+            } catch (ClassNotFoundException e) {
+                retVal = clazz.newInstance();
             }
-            DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
-            if(defaultMessage != null) {
-                defaultValues.put(Plural.OTHER, defaultMessage.value());
-            }
+        } catch (InstantiationException e) {
+            throw new RuntimeException("Could not instantiate custom PluralRule class. " 
+                    + "Make sure the class is not an abstract class or interface and has a default constructor.", e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Could not instantiate custom Plural Rule class.", e);
         }
-        return defaultValues;
+        return retVal;
     }
 }

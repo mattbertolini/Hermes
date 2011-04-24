@@ -19,14 +19,22 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.Map;
+import com.google.gwt.i18n.client.PluralRule;
 
-/**
- * 
- * @author Matt Bertolini
- */
-public interface Plural {
-    String buildPatternName(String baseName);
-    Map<Plural, String> buildDefaultPluralValueMap(Method method);
+public class NoDefaultConstructorPluralRule implements PluralRule {
+
+    public NoDefaultConstructorPluralRule(int n) {
+        // Do nothing
+    }
+    
+    @Override
+    public PluralForm[] pluralForms() {
+        return null;
+    }
+
+    @Override
+    public int select(int n) {
+        return 0;
+    }
+
 }

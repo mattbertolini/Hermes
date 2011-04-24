@@ -19,14 +19,30 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.Map;
 
-/**
- * 
- * @author Matt Bertolini
- */
-public interface Plural {
-    String buildPatternName(String baseName);
-    Map<Plural, String> buildDefaultPluralValueMap(Method method);
+public class CustomPluralRule_fr extends CustomPluralRule {
+    private static PluralForm[] rules = {
+        new PluralForm("other", "Default plural form."),
+        new PluralForm("one", "Singlar plural form."),
+        new PluralForm("custom", "Custom plural form when number is 24.")
+    };
+    
+    @Override
+    public PluralForm[] pluralForms() {
+        return rules;
+    }
+
+    @Override
+    public int select(int n) {
+        int retVal = 0;
+        if(n == 1) {
+            retVal = 1;
+        } else if(n == 24) {
+            retVal = 2;
+        } else {
+            retVal = 0;
+        }
+        return retVal;
+    }
+
 }
