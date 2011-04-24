@@ -94,7 +94,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
             }
             retVal = strMap;
         } else {
-            retVal = constantValue.toString();
+            retVal = constantValue;
         }
         return retVal;
     }
