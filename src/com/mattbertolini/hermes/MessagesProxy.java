@@ -152,6 +152,12 @@ public class MessagesProxy extends AbstractI18nProxy {
         return retVal;
     }
     
+    /**
+     * Instantiates the plural rule class given inside the PluralCount annotation.
+     * 
+     * @param clazz
+     * @return
+     */
     private PluralRule instantiateCustomPluralRuleClass(Class<? extends PluralRule> clazz) {
         PluralRule retVal = null;
         try {
