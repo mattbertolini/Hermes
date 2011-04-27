@@ -153,10 +153,13 @@ public class MessagesProxy extends AbstractI18nProxy {
     }
     
     /**
-     * Instantiates the plural rule class given inside the PluralCount annotation.
+     * Instantiates the plural rule class given inside the PluralCount 
+     * annotation. The pluralRule class that is instantiated is based on the 
+     * language originally given to the library. If that language is not found, 
+     * defaults to the given class.
      * 
-     * @param clazz
-     * @return
+     * @param clazz The PluralRule class
+     * @return An instantiated PluralRule class
      */
     private PluralRule instantiateCustomPluralRuleClass(Class<? extends PluralRule> clazz) {
         PluralRule retVal = null;
