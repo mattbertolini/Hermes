@@ -19,12 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.google.gwt.i18n.client.Messages.DefaultMessage;
-import com.google.gwt.i18n.client.Messages.PluralText;
 import com.ibm.icu.text.PluralRules;
 
 public enum GwtPlural implements Plural {
@@ -33,7 +27,7 @@ public enum GwtPlural implements Plural {
     TWO(PluralRules.KEYWORD_TWO, "two"),
     FEW(PluralRules.KEYWORD_FEW, "few"),
     MANY(PluralRules.KEYWORD_MANY, "many"),
-    OTHER(PluralRules.KEYWORD_OTHER, "");
+    OTHER(PluralRules.KEYWORD_OTHER, "other");
     
     private String icuValue;
     private String gwtValue;
@@ -47,49 +41,9 @@ public enum GwtPlural implements Plural {
         return this.icuValue;
     }
     
+    @Override
     public String getGwtValue() {
         return this.gwtValue;
-    }
-    
-    @Override
-    public String buildPatternName(String baseName) {
-        String retVal;
-        if(GwtPlural.OTHER == this) {
-            retVal = baseName;
-        } else {
-            retVal = baseName + "[" + this.gwtValue + "]";
-        }
-        return retVal;
-    }
-    
-    @Override
-    public Map<Plural, String> buildDefaultPluralValueMap(Method method) {
-        PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
-        Map<Plural, String> defaultValues = null;
-        if(pluralTextAnnotation != null) {
-            String[] values = pluralTextAnnotation.value();
-            defaultValues = new HashMap<Plural, String>();
-            for(int i = 0; i < values.length; i += 2) {
-                Plural key = GwtPlural.fromGwtValue(values[i]);
-                defaultValues.put(key, values[i + 1]);
-            }
-            DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
-            if(defaultMessage != null) {
-                defaultValues.put(GwtPlural.OTHER, defaultMessage.value());
-            }
-        }
-        return defaultValues;
-    }
-    
-    public static Plural fromGwtValue(String gwtValue) {
-        Plural retVal = null;
-        for(GwtPlural plural : GwtPlural.values()) {
-            if(plural.getGwtValue().equals(gwtValue)) {
-                retVal = plural;
-                break;
-            }
-        }
-        return retVal;
     }
     
     public static Plural fromNumber(PluralRules pluralRules, double number) {

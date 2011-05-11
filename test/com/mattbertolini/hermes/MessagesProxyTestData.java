@@ -46,4 +46,6 @@ public interface MessagesProxyTestData extends Messages {
     SafeHtml BasicHtmlMessage(String linkText);
     SafeHtml HtmlMessageWithUnsafeArgument(String unsafeText);
     SafeHtml HtmlMessageWithSafeHtmlArgument(SafeHtml safeHtml);
+    
+    String MessageWithNoKey();
 }

@@ -22,12 +22,18 @@ package com.mattbertolini.hermes;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import com.google.gwt.i18n.client.LocalizableResource.Key;
+import com.google.gwt.i18n.client.Messages.AlternateMessage;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
 import com.google.gwt.i18n.client.Messages.PluralCount;
+import com.google.gwt.i18n.client.Messages.PluralText;
+import com.google.gwt.i18n.client.Messages.Select;
 import com.google.gwt.i18n.client.PluralRule;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
@@ -40,6 +46,10 @@ import com.ibm.icu.util.ULocale;
  * @author Matt Bertolini
  */
 public class MessagesProxy extends AbstractI18nProxy {
+    private static final char OPEN_BRACKET = '[';
+    private static final char CLOSE_BRACKET = ']';
+    private static final char SEPARATOR = '|';
+    
     private PluralRules pluralRules;
     
     public MessagesProxy(Class<?> clazz, String lang, ULocale locale, Properties properties) {
@@ -61,10 +71,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             messageName = keyAnnotation.value();
         }
         
-        boolean hasPluralArgument = false;
-        int pluralArgumentIndex = -1;
-        boolean hasCustomPluralRules = false;
-        PluralRule customRule = null;
+        List<String> pluralPatternNames = new LinkedList<String>();
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         Class<?>[] parameterTypes = method.getParameterTypes();
         for(int i = 0; i < parameterTypes.length; i++) {
@@ -76,46 +83,36 @@ public class MessagesProxy extends AbstractI18nProxy {
                                 || Integer.class.isAssignableFrom(type)
                                 || short.class.isAssignableFrom(type)
                                 || Short.class.isAssignableFrom(type))) {
-                    hasPluralArgument = true;
-                    pluralArgumentIndex = i;
+                    Number num = (Number) args[i];
+                    Plural plural;
                     // Check for a custom plural rule.
                     PluralCount pc = (PluralCount) annotation;
                     Class<? extends PluralRule> pluralRuleClass = pc.value();
                     if(!pluralRuleClass.isInterface() && PluralRule.class.isAssignableFrom(pluralRuleClass)) {
-                        customRule = this.instantiateCustomPluralRuleClass(pluralRuleClass);
-                        hasCustomPluralRules = true;
+                        PluralRule customRule = this.instantiateCustomPluralRuleClass(pluralRuleClass);
+                        plural = CustomPlural.fromNumber(customRule, num.intValue());
+                    } else {
+                        plural = GwtPlural.fromNumber(this.pluralRules, num.doubleValue());
                     }
-                    break;
+                    pluralPatternNames.add(plural.getGwtValue());
+                } else if(Select.class.isAssignableFrom(annotation.annotationType()) 
+                        && (Enum.class.isAssignableFrom(type) || String.class.isAssignableFrom(type))) {
+                    //
                 }
-            }
-            if(hasPluralArgument) {
-                break;
             }
         }
         
-        String pattern;
-        if(hasPluralArgument) {
-            Number num = (Number) args[pluralArgumentIndex];
-            String patternName = null;
-            Plural plural = null;
-            if(hasCustomPluralRules) {
-                plural = CustomPlural.fromNumber(customRule, num.intValue());
-            } else {
-                plural = GwtPlural.fromNumber(this.pluralRules, num.doubleValue());
-            }
-            patternName = plural.buildPatternName(messageName);
-            pattern = this.getProperties().getProperty(patternName);
+        String patternName = this.buildPatternName(messageName, pluralPatternNames);
+        String pattern = this.getProperties().getProperty(patternName);
+        if(pattern == null) {
+            Map<String, String> altMsgMap = this.buildAlternateMessageMap(messageName, method);
+            pattern = altMsgMap.get(patternName);
             if(pattern == null) {
-                Map<Plural, String> defaultValues = plural.buildDefaultPluralValueMap(method);
-                pattern = defaultValues.get(plural);
-            }
-        } else {
-            pattern = this.getProperties().getProperty(messageName);
-            if(pattern == null) {
-                // check for default message annotation
                 DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
                 if(defaultMessage != null) {
                     pattern = defaultMessage.value();
+                } else {
+                    throw new RuntimeException("No message found for key " + messageName);
                 }
             }
         }
@@ -178,5 +175,50 @@ public class MessagesProxy extends AbstractI18nProxy {
             throw new RuntimeException("Could not instantiate custom Plural Rule class.", e);
         }
         return retVal;
+    }
+    
+    private String buildPatternName(String baseName, List<String> pluralNames) {
+        String retVal;
+        StringBuilder pluralStr = new StringBuilder();
+        boolean defaultMessage = true;
+        if(pluralNames != null && !pluralNames.isEmpty()) {
+            pluralStr.append(OPEN_BRACKET);
+            boolean first = true;
+            for(String name : pluralNames) {
+                if(!name.equals(GwtPlural.OTHER.getGwtValue())) {
+                    defaultMessage = false;
+                }
+                if(first) {
+                    first = false;
+                } else {
+                    pluralStr.append(SEPARATOR);
+                }
+                pluralStr.append(name);
+            }
+            pluralStr.append(CLOSE_BRACKET);
+        }
+        if(defaultMessage) {
+            retVal = baseName;
+        } else {
+            retVal = baseName + pluralStr.toString();
+        }
+        return retVal;
+    }
+    
+    private Map<String, String> buildAlternateMessageMap(String baseName, Method method) {
+        Map<String, String> retMap = new LinkedHashMap<String, String>();
+        AlternateMessage altMsgAnnotation = method.getAnnotation(AlternateMessage.class);
+        PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
+        String[] values = new String[0];
+        if(altMsgAnnotation != null) {
+            values = altMsgAnnotation.value();
+        } else if(pluralTextAnnotation != null) {
+            // Fall back on the PluralText if no AlternateMessage found.
+            values = pluralTextAnnotation.value();
+        }
+        for(int i = 0; i < values.length; i += 2) {
+            retMap.put(baseName + OPEN_BRACKET + values[i] + CLOSE_BRACKET, values[i + 1]);
+        }
+        return retMap;
     }
 }

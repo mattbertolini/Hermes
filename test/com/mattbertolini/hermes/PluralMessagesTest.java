@@ -354,4 +354,13 @@ public class PluralMessagesTest {
         String otherActual = testData.PluralMessageCustomRuleDefault(24);
         Assert.assertEquals(otherExpected, otherActual);
     }
+    
+    @Test
+    public void testPluralMessageMultiple() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        
+        String expected = "You have one message and 42 notifications.";
+        String actual = testData.PluralMessageMultiplePluralCount(1, 42);
+        Assert.assertEquals(expected, actual);
+    }
 }

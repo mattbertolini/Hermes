@@ -19,14 +19,11 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.Map;
 
 /**
  * 
  * @author Matt Bertolini
  */
 public interface Plural {
-    String buildPatternName(String baseName);
-    Map<Plural, String> buildDefaultPluralValueMap(Method method);
+    String getGwtValue();
 }

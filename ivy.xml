@@ -30,7 +30,7 @@
         <conf name="source"/>
     </configurations>
     <dependencies>
-        <dependency org="com.google.gwt" name="gwt-servlet" rev="2.1.0" conf="default"/>
+        <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0" conf="default"/>
         <dependency org="com.ibm.icu" name="icu4j" rev="4.6" conf="default"/>
         <dependency org="junit" name="junit" rev="4.8.2" conf="test->default"/>
         <dependency org="emma" name="emma" rev="2.1.5320" conf="test->default"/>

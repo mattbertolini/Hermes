@@ -19,12 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.google.gwt.i18n.client.Messages.DefaultMessage;
-import com.google.gwt.i18n.client.Messages.PluralText;
 import com.google.gwt.i18n.client.PluralRule;
 
 /**
@@ -40,36 +34,10 @@ public class CustomPlural implements Plural {
     public CustomPlural(String gwtValue) {
         this.gwtValue = gwtValue;
     }
-
-    @Override
-    public String buildPatternName(String baseName) {
-        String retVal = null;
-        if(this.gwtValue == null || this.gwtValue.equals(EMPTY_STRING) 
-                || this.gwtValue.equals(OTHER)) {
-            retVal = baseName;
-        } else {
-            retVal = baseName + "[" + this.gwtValue + "]";
-        }
-        return retVal;
-    }
     
     @Override
-    public Map<Plural, String> buildDefaultPluralValueMap(Method method) {
-        PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
-        Map<Plural, String> defaultValues = null;
-        if(pluralTextAnnotation != null) {
-            String[] values = pluralTextAnnotation.value();
-            defaultValues = new HashMap<Plural, String>();
-            for(int i = 0; i < values.length; i += 2) {
-                Plural key = new CustomPlural(values[i]);
-                defaultValues.put(key, values[i + 1]);
-            }
-            DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
-            if(defaultMessage != null) {
-                defaultValues.put(GwtPlural.OTHER, defaultMessage.value());
-            }
-        }
-        return defaultValues;
+    public String getGwtValue() {
+        return this.gwtValue;
     }
     
     public static Plural fromNumber(PluralRule rule, int num) {

@@ -172,6 +172,11 @@ public class MessagesProxyTest {
         Assert.assertEquals(expected.asString(), actual.asString());
     }
     
+    @Test(expected = RuntimeException.class)
+    public void testNoKeyFound() {
+        this.testData.MessageWithNoKey();
+    }
+    
     @Test
     public void testToString() {
         String expected = "com.mattbertolini.hermes.MessagesProxy: com.mattbertolini.hermes.MessagesProxyTestData, lang=en_US";
