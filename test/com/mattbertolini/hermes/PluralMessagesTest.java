@@ -356,11 +356,28 @@ public class PluralMessagesTest {
     }
     
     @Test
-    public void testPluralMessageMultiple() throws IOException {
+    public void testMessageMultiplePluralArguments() throws IOException {
         PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
         
         String expected = "You have one message and 42 notifications.";
         String actual = testData.PluralMessageMultiplePluralCount(1, 42);
         Assert.assertEquals(expected, actual);
+        
+        String otherExpected = "You have 24 messages and 42 notifications.";
+        String otherActual = testData.PluralMessageMultiplePluralCount(24, 42);
+        Assert.assertEquals(otherExpected, otherActual);
+    }
+    
+    @Test
+    public void testMessageMultiplePluralArgumentsDefaults() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        
+        String expected = "You have 24 messages and one notification.";
+        String actual = testData.PluralMessageMultiplePluralCountDefault(24, 1);
+        Assert.assertEquals(expected, actual);
+        
+        String otherExpected = "You have one message and one notification.";
+        String otherActual = testData.PluralMessageMultiplePluralCountDefault(1, 1);
+        Assert.assertEquals(otherExpected, otherActual);
     }
 }

@@ -46,6 +46,12 @@ public interface MessagesProxyTestData extends Messages {
     SafeHtml BasicHtmlMessage(String linkText);
     SafeHtml HtmlMessageWithUnsafeArgument(String unsafeText);
     SafeHtml HtmlMessageWithSafeHtmlArgument(SafeHtml safeHtml);
-    
     String MessageWithNoKey();
+    String MessageWithEnumSelect(@Select SelectEnum arg);
+    String MessageWithStringSelect(@Select String arg);
+    String MessageWithIntSelect(@Select int arg);
+    String MessageWithLongSelect(@Select long arg);
+    String MessageWithFloatSelect(@Select float arg);
+    String MessageWithShortSelect(@Select short arg);
+    String MessageWithDoubleSelect(@Select double arg);
 }

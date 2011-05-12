@@ -71,7 +71,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             messageName = keyAnnotation.value();
         }
         
-        List<String> pluralPatternNames = new LinkedList<String>();
+        List<String> formsNames = new LinkedList<String>();
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         Class<?>[] parameterTypes = method.getParameterTypes();
         for(int i = 0; i < parameterTypes.length; i++) {
@@ -94,25 +94,50 @@ public class MessagesProxy extends AbstractI18nProxy {
                     } else {
                         plural = GwtPlural.fromNumber(this.pluralRules, num.doubleValue());
                     }
-                    pluralPatternNames.add(plural.getGwtValue());
-                } else if(Select.class.isAssignableFrom(annotation.annotationType()) 
-                        && (Enum.class.isAssignableFrom(type) || String.class.isAssignableFrom(type))) {
-                    //
+                    formsNames.add(plural.getGwtValue());
+                } else if(Select.class.isAssignableFrom(annotation.annotationType())) {
+                    if(Enum.class.isAssignableFrom(type)) {
+                        Enum<?> enumConstant = (Enum<?>) args[i];
+                        String name;
+                        if(enumConstant == null) {
+                            name = "other";
+                        } else {
+                            name = enumConstant.name();
+                        }
+                        formsNames.add(name);
+                    } else if(String.class.isAssignableFrom(type)) {
+                        String str = (String) args[i];
+                        if(str == null) {
+                            str = "other";
+                        }
+                        formsNames.add(str);
+                    } else if(type.isPrimitive() 
+                            && (int.class.isAssignableFrom(type) 
+                                    || long.class.isAssignableFrom(type)
+                                    || float.class.isAssignableFrom(type) 
+                                    || short.class.isAssignableFrom(type)
+                                    || double.class.isAssignableFrom(type))) {
+                        Number num = (Number) args[i];
+                        formsNames.add(num.toString());
+                    }
                 }
             }
         }
         
-        String patternName = this.buildPatternName(messageName, pluralPatternNames);
+        String patternName = this.buildPatternName(messageName, formsNames);
         String pattern = this.getProperties().getProperty(patternName);
         if(pattern == null) {
             Map<String, String> altMsgMap = this.buildAlternateMessageMap(messageName, method);
             pattern = altMsgMap.get(patternName);
             if(pattern == null) {
-                DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
-                if(defaultMessage != null) {
-                    pattern = defaultMessage.value();
-                } else {
-                    throw new RuntimeException("No message found for key " + messageName);
+                pattern = this.getProperties().getProperty(messageName);
+                if(pattern == null) {
+                    DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
+                    if(defaultMessage != null) {
+                        pattern = defaultMessage.value();
+                    } else {
+                        throw new RuntimeException("No message found for key " + messageName);
+                    }
                 }
             }
         }

@@ -41,6 +41,8 @@ public interface PluralMessagesTestData extends Messages {
     
     String PluralMessageWithCustomRuleNoDefaultConstructor(@PluralCount(NoDefaultConstructorPluralRule.class) int count);
     
+    String PluralMessageMultiplePluralCount(@PluralCount int count1, @PluralCount int count2);
+    
     @DefaultMessage("You have {0} messages and {1} notifications.")
     @AlternateMessage({"none|none", "You have no messages or notifications.",
                        "none|one", "You have a notification.",
@@ -48,5 +50,5 @@ public interface PluralMessagesTestData extends Messages {
                        "one|one", "You have one message and one notification.",
                        "other|one", "You have {0} messages and one notification.",
                        "one|other", "You have one message and {1} notifications."})
-    String PluralMessageMultiplePluralCount(@PluralCount int count1, @PluralCount int count2);
+    String PluralMessageMultiplePluralCountDefault(@PluralCount int count1, @PluralCount int count2);
 }
