@@ -19,7 +19,8 @@ LICENSE file for full license information.
 Requirements
 ============
 
-Hermes requires Java 1.6, GWT 2.1, and ICU 4.6 to run.
+Hermes version 1.2 requires Java 1.6, GWT 2.2, and ICU 4.6 to run. If you need 
+GWT 2.1 support, use the 1.1.x line.
 
 Differences Between Hermes and GWT I18N
 =======================================

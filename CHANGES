@@ -1,6 +1,14 @@
 Hermes Change Log
 =================
 
+Version 1.2.0 -- 2011-05-12
+-------------------------------------------------------------------------------
+Features:
+* Support for GWT 2.2 and above. GWT 2.2 introduced multiple plural arguments, 
+the @Select annotation, and the @AlternateMessage annotation. Support for these 
+features has been added. Version 1.2 of Hermes no longer works with GWT 2.1. If 
+you are using GWT 2.1, use the 1.1.x line of Hermes.
+
 Version 1.1.0 -- 2011-04-24
 -------------------------------------------------------------------------------
 Features:
