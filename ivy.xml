@@ -18,10 +18,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 -->
 <ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
-    <info organisation="com.mattbertolini" module="hermes" status="integration">
+    <info organisation="com.mattbertolini" module="hermes" status="integration" revision="${project.version}">
         <license name="GNU Lesser General Public License 2.1" url="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
         <ivyauthor name="Matt Bertolini"/>
-        <description>GWT Server-side I18N Library</description>
+        <description homepage="https://github.com/MaliciousMonkey/Hermes">GWT Server-side I18N Library</description>
     </info>
     <configurations>
         <conf name="core"/>
@@ -29,6 +29,12 @@
         <conf name="test"/>
         <conf name="source"/>
     </configurations>
+    <publications>
+        <artifact name="hermes-pom" type="pom" ext="pom"/>
+        <artifact name="hermes-jar" type="jar" ext="jar"/>
+        <artifact name="hermes-javadoc" type="jar" ext="jar"/>
+        <artifact name="hermes-sources" type="jar" ext="jar"/>
+    </publications>
     <dependencies>
         <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0" conf="default"/>
         <dependency org="com.ibm.icu" name="icu4j" rev="4.6" conf="default"/>

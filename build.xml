@@ -148,6 +148,13 @@
         <jar destfile="${dist.dir}/${project.filename.jar.sources}" basedir="${src.dir}"/>
     </target>
 	
+    <target name="make-pom">
+        <ivy:makepom ivyfile="${basedir}/ivy.xml" pomfile="${dist.dir}/${project.filename.pom}" artifactpackaging="jar" templatefile="pom.xml">
+            <mapping conf="default" scope="compile"/>
+            <mapping conf="test" scope="test"/>
+        </ivy:makepom>
+    </target>
+	
 	<target name="archive-bin" depends="jar,jar-javadoc,jar-sources">
         <fileset id="bin-fileset" dir="${dist.dir}">
             <include name="${project.filename.jar}"/>
@@ -156,7 +163,7 @@
         </fileset>
         <zipfileset id="bin-javadoc-fileset" dir="${build.javadoc.dir}" prefix="apidocs"/>
         <zip destfile="${dist.dir}/${project.filename.bin}.zip">
-            <fileset refid="bin-fileset" />
+            <fileset refid="bin-fileset"/>
             <zipfileset refid="bin-javadoc-fileset"/>
         </zip>
         <tar destfile="${dist.dir}/${project.filename.bin}.tar">
@@ -169,15 +176,16 @@
 
     <target name="archive-project" depends="init">
         <fileset id="project-fileset" dir="." defaultexcludes="true">
-            <exclude name="**/.git/" />
-            <exclude name="**/.gitignore" />
-            <exclude name="**/*.project" />
-            <exclude name="**/*.classpath" />
-            <exclude name="**/.settings/" />
-            <exclude name="**/lib/" />
-            <exclude name="**/bin/" />
-            <exclude name="**/build/" />
-            <exclude name="**/dist/" />
+            <exclude name="**/.git/"/>
+            <exclude name="**/.gitignore"/>
+            <exclude name="**/*.project"/>
+            <exclude name="**/*.classpath"/>
+            <exclude name="**/.settings/"/>
+        	<exclude name="**/.fbprefs"/>
+            <exclude name="**/lib/"/>
+            <exclude name="**/bin/"/>
+            <exclude name="**/build/"/>
+            <exclude name="**/dist/"/>
         </fileset>
         <zip destfile="${dist.dir}/${project.filename.src}.zip">
             <fileset refid="project-fileset"/>
