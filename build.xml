@@ -117,7 +117,7 @@
         <javadoc destdir="${build.javadoc.dir}" sourcepath="${src.dir}" classpathref="classpath.default" failonerror="true" windowtitle="${project.javadoc.title}">
             <doctitle>${project.javadoc.title}</doctitle>
             <link href="http://download.oracle.com/javase/6/docs/api/"/>
-            <link href="http://google-web-toolkit.googlecode.com/svn/javadoc/2.1/"/>
+            <link href="http://google-web-toolkit.googlecode.com/svn/javadoc/2.2/"/>
             <link href="http://icu-project.org/apiref/icu4j/"/>
         </javadoc>
     </target>
@@ -154,8 +154,8 @@
             <mapping conf="test" scope="test"/>
         </ivy:makepom>
     </target>
-	
-	<target name="archive-bin" depends="jar,jar-javadoc,jar-sources">
+    
+    <target name="archive-bin" depends="jar,jar-javadoc,jar-sources">
         <fileset id="bin-fileset" dir="${dist.dir}">
             <include name="${project.filename.jar}"/>
             <include name="${project.filename.jar.javadoc}"/>
@@ -197,5 +197,5 @@
         <delete file="${dist.dir}/${project.filename.src}.tar"/>
     </target>
 
-    <target name="build" depends="archive-bin,archive-project" description="Runs full build."/>
+    <target name="build" depends="make-pom,archive-bin,archive-project" description="Runs full build."/>
 </project>
