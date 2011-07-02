@@ -32,6 +32,18 @@ Differences Between Hermes and GWT I18N
 * The locale hierarchy and fallback system as described in the GWT Constants 
   Javadoc is not supported. The locale given to Hermes must match a valid 
   properties file or it will use the default properties file.
+  
+Maven Artifact Info
+===================
+
+You can get Hermes though the Maven central repository. here is the artifact 
+snippet.
+
+<dependency>
+  <groupId>com.mattbertolini</groupId>
+  <artifactId>hermes</artifactId>
+  <version>1.2.0</version>
+</dependency>
 
 Frequently Asked Questions
 ==========================
