@@ -74,4 +74,20 @@ public class HermesTest {
             Assert.fail("A runtime exception was thrown. Encoding is broken.");
         }
     }
+    
+    @Test
+    public void testMessageWithPrivateUseTag() throws IOException {
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "en_us_x_priv");
+        String expected = "This is loaded from the private extension file.";
+        String actual = testData.BasicMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+    
+    @Test
+    public void testFallbackFileLoading() throws IOException {
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "fr_CA");
+        String expected = "[fr] This is a basic message with a key with a different name.";
+        String actual = testData.BasicMessageWithKey();
+        Assert.assertEquals(expected, actual);
+    }
 }

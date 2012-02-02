@@ -31,8 +31,8 @@ import com.ibm.icu.util.ULocale;
  */
 public class ConstantsWithLookupProxy extends ConstantsProxy {
 
-    public ConstantsWithLookupProxy(Class<?> clazz, String lang, ULocale locale, Properties properties) {
-        super(clazz, lang, locale, properties);
+    public ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, Properties properties) {
+        super(clazz, locale, properties);
     }
 
     @Override

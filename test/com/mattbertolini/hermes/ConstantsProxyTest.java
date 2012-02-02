@@ -155,7 +155,7 @@ public class ConstantsProxyTest {
     
     @Test
     public void testToString() {
-        String expected = "com.mattbertolini.hermes.ConstantsProxy: com.mattbertolini.hermes.ConstantsProxyTestData, lang=en_US";
+        String expected = "com.mattbertolini.hermes.ConstantsProxy: com.mattbertolini.hermes.ConstantsProxyTestData";
         String actual = this.testData.toString();
         Assert.assertEquals(expected, actual);
     }

@@ -40,8 +40,8 @@ import com.ibm.icu.util.ULocale;
  */
 public class ConstantsProxy extends AbstractI18nProxy {
 
-    public ConstantsProxy(Class<?> clazz, String lang, ULocale locale, Properties properties) {
-        super(clazz, lang, locale, properties);
+    public ConstantsProxy(Class<?> clazz, ULocale locale, Properties properties) {
+        super(clazz, locale, properties);
     }
 
     @Override

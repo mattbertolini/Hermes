@@ -284,7 +284,7 @@ public class MessagesProxyTest {
     
     @Test
     public void testToString() {
-        String expected = "com.mattbertolini.hermes.MessagesProxy: com.mattbertolini.hermes.MessagesProxyTestData, lang=en_US";
+        String expected = "com.mattbertolini.hermes.MessagesProxy: com.mattbertolini.hermes.MessagesProxyTestData";
         String actual = this.testData.toString();
         Assert.assertEquals(expected, actual);
     }

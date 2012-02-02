@@ -45,7 +45,7 @@ public class Hermes {
     private static final String PROPERTIES_EXT = ".properties";
     private static final String UTF_8 = "UTF-8";
     
-    private static Map<String, Object> cache = new HashMap<String, Object>();
+    private static Map<LocaleMapKey, Object> cache = new HashMap<LocaleMapKey, Object>();
     
     /**
      * For a given interface and locale ,retrieves the GWT i18n interface as a 
@@ -54,39 +54,53 @@ public class Hermes {
      * that it has created so it is safe to call multiple times.
      * 
      * @param clazz The GWT i18n interface to get the proxy for.
-     * @param lang The IETF language tag for the locale being requested.
+     * @param localeStr The locale ID string for the locale being requested.
      * @return A dynamic proxy representing the given GWT i18n interface and 
      * locale.
      * @throws IOException If an error occurs finding, opening, or reading the 
      * GWT properties file associated with the given interface.
      */
     @SuppressWarnings("unchecked")
-    public static <T> T get(Class<T> clazz, String lang) throws IOException {
+    public static <T> T get(Class<T> clazz, String localeStr) throws IOException {
         if(clazz == null) {
             throw new IllegalArgumentException("Class cannot be null.");
         }
-        String fileName = clazz.getName() + (lang == null || lang.isEmpty() ? "" : ("_" + lang));
-        fileName = fileName.replace(DOT, SLASH);
-        fileName = fileName + PROPERTIES_EXT;
-        T proxy = (T) cache.get(fileName);
+        ULocale locale = null;
+        if(localeStr != null && !localeStr.isEmpty()) {
+            locale = ULocale.createCanonical(localeStr);
+        }
+        LocaleMapKey key = new LocaleMapKey(clazz.getName(), locale);
+        T proxy = (T) cache.get(key);
         if(proxy == null) {
-            proxy = createProxy(clazz, lang, fileName);
-            cache.put(fileName, proxy);
+            proxy = createProxy(clazz, locale);
+            cache.put(key, proxy);
         }
         return proxy;
     }
     
     @SuppressWarnings("unchecked")
-    private static <T> T createProxy(Class<T> clazz, String lang, String fileName) throws IOException {
-        String defaultFileName = (clazz.getName().replace(DOT, SLASH)) + PROPERTIES_EXT;
-        ClassLoader classLoader = clazz.getClassLoader();
+    private static <T> T createProxy(Class<T> clazz, ULocale locale) throws IOException {
         InputStream is = null;
         InputStreamReader reader = null;
         Properties properties = new Properties();
+        // This is the actual locale the proxy classes will be given. It may be 
+        // changed from the locale given by the user if a locale fallback is required.
+        ULocale realLocale = locale;
         try {
-            is = classLoader.getResourceAsStream(fileName);
+            while(realLocale != null) {
+                is = getPropertiesFile(clazz, realLocale);
+                if(is == null) {
+                    realLocale = realLocale.getFallback();
+                } else {
+                    break;
+                }
+            }
+            if(realLocale == null) {
+                realLocale = ULocale.getDefault();
+            }
             if(is == null) {
-                is = classLoader.getResourceAsStream(defaultFileName);
+                // Get default properties file.
+                is = getPropertiesFile(clazz, null);
                 if(is == null) {
                     throw new FileNotFoundException("Could not find any properties files matching the given class.");
                 }
@@ -103,17 +117,36 @@ public class Hermes {
                 is.close();
             }
         }
-        ULocale locale = ULocale.createCanonical(lang);
         InvocationHandler handler;
         if(ConstantsWithLookup.class.isAssignableFrom(clazz)) {
-            handler = new ConstantsWithLookupProxy(clazz, lang, locale, properties);
+            handler = new ConstantsWithLookupProxy(clazz, realLocale, properties);
         } else if(Constants.class.isAssignableFrom(clazz)) {
-            handler = new ConstantsProxy(clazz, lang, locale, properties);
+            handler = new ConstantsProxy(clazz, realLocale, properties);
         } else if(Messages.class.isAssignableFrom(clazz)) {
-            handler = new MessagesProxy(clazz, lang, locale, properties);
+            handler = new MessagesProxy(clazz, realLocale, properties);
         } else {
             throw new IllegalArgumentException("Class " + clazz.getName() + " does not implement required interfaces.");
         }
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[] {clazz}, handler);
+    }
+    
+    /**
+     * Get the properties file associated with the given interface and locale 
+     * as an InputStream. Use the return value in an InputStream reader to load 
+     * the properties file data into a Properties object.
+     * 
+     * @param clazz The Class representing one of the i18n interface.
+     * @param locale The locale to get the properties for.
+     * @return Returns an InputStream of the file data suitable for loading 
+     * into a Properties object or null if no properties file for the file 
+     * path is found.
+     */
+    private static <T> InputStream getPropertiesFile(Class<T> clazz, ULocale locale) {
+        String localeStr = "";
+        if(locale != null) {
+            localeStr = '_' + locale.getName();
+        }
+        String filePath = clazz.getName().replace(DOT, SLASH) + localeStr + PROPERTIES_EXT;
+        return clazz.getClassLoader().getResourceAsStream(filePath);
     }
 }

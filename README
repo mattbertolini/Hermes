@@ -33,6 +33,8 @@ Differences Between Hermes and GWT I18N
   Javadoc is not supported. The locale given to Hermes must match a valid 
   properties file or it will use the default properties file.
   
+* Plural form exact values and offsets are not supported.  
+  
 Maven Artifact Info
 ===================
 

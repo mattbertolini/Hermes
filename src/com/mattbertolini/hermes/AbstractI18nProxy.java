@@ -31,13 +31,11 @@ import com.ibm.icu.util.ULocale;
  */
 public abstract class AbstractI18nProxy implements InvocationHandler {
     private Class<?> clazz;
-    private String lang;
     private Properties properties;
     private ULocale locale;
     
-    public AbstractI18nProxy(Class<?> clazz, String lang, ULocale locale, Properties properties) {
+    public AbstractI18nProxy(Class<?> clazz, ULocale locale, Properties properties) {
         this.clazz = clazz;
-        this.lang = lang;
         this.properties = properties;
         this.locale = locale;
     }
@@ -72,6 +70,6 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
 
     @Override
     public String toString() {
-        return this.getClass().getName() + ": " + this.clazz.getName() + ", lang=" + this.lang;
+        return this.getClass().getName() + ": " + this.clazz.getName();
     }
 }

@@ -52,8 +52,8 @@ public class MessagesProxy extends AbstractI18nProxy {
     
     private PluralRules pluralRules;
     
-    public MessagesProxy(Class<?> clazz, String lang, ULocale locale, Properties properties) {
-        super(clazz, lang, locale, properties);
+    public MessagesProxy(Class<?> clazz, ULocale locale, Properties properties) {
+        super(clazz, locale, properties);
         this.pluralRules = PluralRules.forLocale(this.getLocale());
     }
     
