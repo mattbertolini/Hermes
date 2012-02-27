@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2012  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -84,7 +84,8 @@ public class Hermes {
         InputStreamReader reader = null;
         Properties properties = new Properties();
         // This is the actual locale the proxy classes will be given. It may be 
-        // changed from the locale given by the user if a locale fallback is required.
+        // changed from the locale given by the user if a locale fallback is 
+        // required.
         ULocale realLocale = locale;
         try {
             while(realLocale != null) {

@@ -33,7 +33,10 @@ Differences Between Hermes and GWT I18N
   Javadoc is not supported. The locale given to Hermes must match a valid 
   properties file or it will use the default properties file.
   
-* Plural form exact values and offsets are not supported.  
+* Plural form exact values and offsets are not supported.
+
+* GWT extension {name,text}, {0,list}, {0,localdatetime,skeleton}, and extra 
+  formatter arguments are not supported.  
   
 Maven Artifact Info
 ===================
@@ -69,7 +72,7 @@ provide the following information:
 
 * Version of Hermes
 * Version of GWT
-* Type of interface (Messages, Constants, ConstantsWithLookup
+* Type of interface (Messages, Constants, ConstantsWithLookup)
 * The properties string that is not working
 * Any arguments passed to the method for inclusion into the string
 * The observed output
@@ -77,3 +80,6 @@ provide the following information:
 
 Giving this information will help me track down the issue and write unit tests 
 to make sure I fix the bug.
+
+Also, if you have found a bug and already found a fix, patches and pull 
+requests are welcome. Please make sure you include unit tests to verify the fix.
