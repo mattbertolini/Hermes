@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Hermes - GWT Server-side I18N Library
-  Copyright (C) 2011  Matt Bertolini
+  Copyright (C) 2012  Matt Bertolini
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -17,19 +17,14 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 -->
-<project name="hermes" basedir="." default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="hermes" basedir="." default="dist" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:emma="antlib:net.sf.emma">
 	<property file="build.properties"/>
-	
-    <path id="classpath.default">
-        <fileset dir="${lib.dir}/default"/>
-    </path>
-	
-    <path id="classpath.test">
-        <path refid="classpath.default"/>
-        <fileset dir="${lib.dir}/test"/>
-        <pathelement location="${build.instrumentedclasses.dir}"/>
-        <pathelement location="${build.testclasses.dir}"/>
-    </path>
+    
+    <condition property="offline" value="true" else="false">
+        <not>    
+            <http url="http://www.google.com/"/>
+        </not>
+    </condition>
 	
     <target name="clean">
         <delete dir="${build.dir}"/>
@@ -37,57 +32,103 @@
     </target>
 
 	<target name="init" depends="clean">
-		<mkdir dir="${lib.dir}"/>
+	    <mkdir dir="${lib.compile.dir}"/>
+	    <mkdir dir="${lib.test.dir}"/>
+	    <mkdir dir="${lib.build.dir}"/>
 		<mkdir dir="${build.classes.dir}"/>
-		<mkdir dir="${build.testclasses.dir}"/>
+		<mkdir dir="${build.test.classes.dir}"/>
+	    <mkdir dir="${build.test.resources.dir}"/>
 		<mkdir dir="${build.instrumentedclasses.dir}"/>
 		<mkdir dir="${build.javadoc.dir}"/>
 		<mkdir dir="${build.reports.dependency.dir}"/>
 		<mkdir dir="${build.reports.unittest.dir}"/>
 		<mkdir dir="${build.reports.coverage.dir}"/>
+	    <mkdir dir="${build.temp.dir}"/>
 		<mkdir dir="${dist.dir}"/>
 	</target>
+    
+    <target name="download-ivy" depends="init" unless="${offline}">
+        <get src="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${project.ivy.version}/ivy-${project.ivy.version}.jar" dest="${lib.build.dir}/ivy-${project.ivy.version}.jar" usetimestamp="true"/>
+    </target>
+    
+    <target name="init-ivy" depends="download-ivy">
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="${lib.build.dir}/ivy-${project.ivy.version}.jar"/>
+    </target>
 	
-	<target name="retrieve" depends="init">
-		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision].[ext]" sync="true"/>
+	<target name="retrieve-dependencies" depends="init-ivy">
+		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>
 		<ivy:report todir="${build.reports.dependency.dir}"/>
 	</target>
-	
-    <target name="compile" depends="retrieve">
-        <javac srcdir="${src.dir}" destdir="${build.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false">
-            <classpath refid="classpath.default"/>
-        </javac>
-    </target>
-	
-   <target name="compile-instrumented" depends="retrieve">
-        <javac srcdir="${src.dir}" destdir="${build.instrumentedclasses.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
-            <classpath refid="classpath.default"/>
-        </javac>
-    </target>
-	
-    <target name="compile-tests" depends="compile-instrumented">
-        <javac srcdir="${test.dir}" destdir="${build.testclasses.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false">
-            <classpath refid="classpath.test"/>
-        </javac>
-        <copy todir="${build.dir}/testclasses/">
-            <fileset dir="${test.dir}">
-                <include name="**/*.properties"/>
-            </fileset>
-        </copy>
-    </target>
-	
-    <target name="test" depends="compile-tests">
-        <taskdef resource="emma_ant.properties" classpathref="classpath.test"/>
+    
+    <target name="create-paths" depends="retrieve-dependencies">
+        <path id="build-classpath">
+            <fileset dir="${lib.build.dir}"/>
+        </path>
         
-        <emma enabled="true">
+        <path id="compile-classpath">
+            <fileset dir="${lib.compile.dir}"/>
+        </path>
+        
+        <path id="test-classpath">
+            <fileset dir="${lib.test.dir}"/>
+        </path>
+        
+        <path id="compile-source-classpath">
+            <path refid="compile-classpath"/>
+        </path>
+        
+        <path id="compile-tests-classpath">
+            <path location="${build.classes.dir}"/>
+            <path refid="compile-classpath"/>
+            <path refid="test-classpath"/>
+        </path>
+        
+        <path id="run-tests-classpath">
+            <path location="${build.instrumentedclasses.dir}"/>
+            <path location="${build.test.classes.dir}"/>
+            <path location="${build.test.resources.dir}"/>
+            <path refid="compile-classpath"/>
+            <path refid="test-classpath"/>
+            <path refid="build-classpath"/>
+        </path>
+    </target>
+    
+    <target name="load-third-party-tasks" depends="create-paths">       
+        <taskdef resource="emma_ant.properties" uri="antlib:net.sf.emma" classpathref="build-classpath"/>
+    </target>
+    
+    <target name="sync-test-resources" depends="init">
+        <sync todir="${build.test.resources.dir}">
+            <fileset dir="${src.test.resources.dir}"/>
+        </sync>
+    </target>
+	
+    <target name="compile-source" depends="create-paths">
+        <depend srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" cache="${build.temp.dir}" closure="true"/>
+        <javac srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+            <classpath refid="compile-source-classpath"/>
+        </javac>
+    </target>
+	
+    <target name="compile-tests" depends="compile-source">
+        <depend srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" cache="${build.temp.dir}" closure="true"/>
+        <javac srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+            <classpath refid="compile-tests-classpath"/>
+        </javac>
+    </target>
+	
+    <target name="run-tests" depends="load-third-party-tasks, sync-test-resources, compile-tests">
+        <sync todir="${build.instrumentedclasses.dir}">
+            <fileset dir="${build.classes.dir}"/>
+        </sync>
+        <emma:emma enabled="true">
             <instr instrpath="${build.instrumentedclasses.dir}" destdir="${build.instrumentedclasses.dir}" mode="overwrite" metadatafile="${build.reports.coverage.dir}/metadata.emma" merge="true"/>
-        </emma>
-    	
+        </emma:emma>
     	<junit haltonerror="false" haltonfailure="false" printsummary="true" errorproperty="test.failed" failureproperty="test.failed">
-            <classpath refid="classpath.test"/>
+            <classpath refid="run-tests-classpath"/>
             <formatter type="xml"/>
             <batchtest fork="true" todir="${build.reports.unittest.dir}">
-                <fileset dir="${build.testclasses.dir}">
+                <fileset dir="${build.test.classes.dir}">
                     <include name="**/*Test.class"/>
                 </fileset>
             </batchtest>
@@ -102,19 +143,19 @@
             <report format="frames" todir="${build.reports.unittest.dir}"/>
         </junitreport>
     	
-        <emma enabled="true">
-            <report sourcepath="${src.dir}">
+        <emma:emma enabled="true">
+            <report sourcepath="${src.main.java.dir}">
                 <fileset dir="${build.reports.coverage.dir}">
                     <include name="*.emma"/>
                 </fileset>
                 <html outfile="${build.reports.coverage.dir}/coverage.html"/>
             </report>
-        </emma>
+        </emma:emma>
         <fail if="test.failed">One or more unit tests failed/errored. Check ${build.reports.unittest.dir} for details.</fail>
     </target>
 	
-    <target name="javadoc" depends="retrieve">
-        <javadoc destdir="${build.javadoc.dir}" sourcepath="${src.dir}" classpathref="classpath.default" failonerror="true" windowtitle="${project.javadoc.title}">
+    <target name="javadoc" depends="retrieve-dependencies">
+        <javadoc destdir="${build.javadoc.dir}" sourcepath="${src.main.java.dir}" classpathref="compile-source-classpath" failonerror="true" windowtitle="${project.javadoc.title}">
             <doctitle>${project.javadoc.title}</doctitle>
             <link href="http://download.oracle.com/javase/6/docs/api/"/>
             <link href="http://google-web-toolkit.googlecode.com/svn/javadoc/2.2/"/>
@@ -122,7 +163,7 @@
         </javadoc>
     </target>
 	
-	<target name="jar" depends="compile,test">
+	<target name="jar" depends="compile-source, run-tests">
         <tstamp>
             <format property="build-date" pattern="yyyy-MM-dd"/>
         </tstamp>
@@ -148,10 +189,11 @@
         <jar destfile="${dist.dir}/${project.filename.jar.sources}" basedir="${src.dir}"/>
     </target>
 	
-    <target name="make-pom">
+    <target name="make-pom" depends="retrieve-dependencies">
         <ivy:makepom ivyfile="${basedir}/ivy.xml" pomfile="${dist.dir}/${project.filename.pom}" artifactpackaging="jar" templatefile="pom.xml">
-            <mapping conf="default" scope="compile"/>
+            <mapping conf="compile" scope="compile"/>
             <mapping conf="test" scope="test"/>
+            <mapping conf="build" scope="test"/>
         </ivy:makepom>
     </target>
     
@@ -197,5 +239,11 @@
         <delete file="${dist.dir}/${project.filename.src}.tar"/>
     </target>
 
-    <target name="build" depends="make-pom,archive-bin,archive-project" description="Runs full build."/>
+    <target name="dist" description="Runs full build.">
+        <antcall>
+            <target name="archive-bin"/>
+            <target name="archive-project"/>
+            <target name="make-pom"/>
+        </antcall>
+    </target>
 </project>

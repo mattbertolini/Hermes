@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Hermes - GWT Server-side I18N Library
-  Copyright (C) 2011  Matt Bertolini
+  Copyright (C) 2012  Matt Bertolini
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,10 +24,9 @@
         <description homepage="https://github.com/MaliciousMonkey/Hermes">GWT Server-side I18N Library</description>
     </info>
     <configurations>
-        <conf name="core"/>
-        <conf name="default" extends="core"/>
+        <conf name="compile"/>
         <conf name="test"/>
-        <conf name="source"/>
+        <conf name="build"/>
     </configurations>
     <publications>
         <artifact name="hermes-pom" type="pom" ext="pom"/>
@@ -35,11 +34,11 @@
         <artifact name="hermes-javadoc" type="jar" ext="jar"/>
         <artifact name="hermes-sources" type="jar" ext="jar"/>
     </publications>
-    <dependencies>
-        <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0" conf="default"/>
-        <dependency org="com.ibm.icu" name="icu4j" rev="4.6" conf="default"/>
+    <dependencies defaultconfmapping="compile->default">
+        <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0"/>
+        <dependency org="com.ibm.icu" name="icu4j" rev="4.6"/>
         <dependency org="junit" name="junit" rev="4.8.2" conf="test->default"/>
-        <dependency org="emma" name="emma" rev="2.1.5320" conf="test->default"/>
-        <dependency org="emma" name="emma_ant" rev="2.1.5320" conf="test->default"/>
+        <dependency org="emma" name="emma" rev="2.1.5320" conf="build->default"/>
+        <dependency org="emma" name="emma_ant" rev="2.1.5320" conf="build->default"/>
     </dependencies>
 </ivy-module>
