@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes;
 
+import java.util.Arrays;
+
 import com.google.gwt.i18n.client.PluralRule;
 
 public class CustomPluralRule implements PluralRule {
@@ -30,7 +32,7 @@ public class CustomPluralRule implements PluralRule {
     
     @Override
     public PluralForm[] pluralForms() {
-        return rules;
+        return Arrays.copyOf(rules, rules.length);
     }
 
     @Override

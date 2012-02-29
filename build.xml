@@ -17,7 +17,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 -->
-<project name="hermes" basedir="." default="dist" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:emma="antlib:net.sf.emma">
+<project name="hermes" basedir="." default="dist" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:emma="antlib:net.sf.emma" xmlns:findbugs="antlib:edu.umd.cs.findbugs">
 	<property file="build.properties"/>
     
     <condition property="offline" value="true" else="false">
@@ -43,6 +43,7 @@
 		<mkdir dir="${build.reports.dependency.dir}"/>
 		<mkdir dir="${build.reports.unittest.dir}"/>
 		<mkdir dir="${build.reports.coverage.dir}"/>
+	    <mkdir dir="${build.reports.findbugs.dir}"/>
 	    <mkdir dir="${build.temp.dir}"/>
 		<mkdir dir="${dist.dir}"/>
 	</target>
@@ -58,6 +59,7 @@
 	<target name="retrieve-dependencies" depends="init-ivy">
 		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>
 		<ivy:report todir="${build.reports.dependency.dir}"/>
+	    <ivy:artifactproperty name="dependency.[conf].[artifact]" value="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
 	</target>
     
     <target name="create-paths" depends="retrieve-dependencies">
@@ -95,6 +97,7 @@
     
     <target name="load-third-party-tasks" depends="create-paths">       
         <taskdef resource="emma_ant.properties" uri="antlib:net.sf.emma" classpathref="build-classpath"/>
+        <taskdef resource="edu/umd/cs/findbugs/anttask/tasks.properties" classpathref="build-classpath" uri="antlib:edu.umd.cs.findbugs"/>
     </target>
     
     <target name="sync-test-resources" depends="init">
@@ -152,6 +155,25 @@
             </report>
         </emma:emma>
         <fail if="test.failed">One or more unit tests failed/errored. Check ${build.reports.unittest.dir} for details.</fail>
+    </target>
+    
+    <target name="run-findbugs" depends="create-paths, load-third-party-tasks, compile-source, compile-tests">
+        <path id="aux-classpath">
+            <path refid="compile-classpath"/>
+            <path refid="test-classpath"/>
+        </path>
+        <findbugs:findbugs classpathref="build-classpath" pluginlist="" output="xml:withMessages" outputFile="${build.reports.findbugs.dir}/hermes-findbugs.xml">
+            <class location="${build.classes.dir}"/>
+            <class location="${build.test.classes.dir}"/>
+            <auxClasspath refid="aux-classpath"/>
+            <sourcePath path="${src.main.java.dir}"/>
+            <sourcePath path="${src.test.java.dir}"/>
+        </findbugs:findbugs>
+        <xslt in="${build.reports.findbugs.dir}/hermes-findbugs.xml" out="${build.reports.findbugs.dir}/labcoat-findbugs.html">
+            <style>
+                <url url="jar:file:${dependency.build.findbugs}!/default.xsl"/>
+            </style>
+        </xslt>
     </target>
 	
     <target name="javadoc" depends="retrieve-dependencies">

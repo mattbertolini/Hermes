@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes;
 
+import java.util.Arrays;
+
 
 public class CustomPluralRule_fr extends CustomPluralRule {
     private static PluralForm[] rules = {
@@ -29,7 +31,7 @@ public class CustomPluralRule_fr extends CustomPluralRule {
     
     @Override
     public PluralForm[] pluralForms() {
-        return rules;
+        return Arrays.copyOf(rules, rules.length);
     }
 
     @Override
