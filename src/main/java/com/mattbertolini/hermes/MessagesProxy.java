@@ -184,7 +184,7 @@ public class MessagesProxy extends AbstractI18nProxy {
      * @return An instantiated PluralRule class
      */
     private PluralRule instantiateCustomPluralRuleClass(Class<? extends PluralRule> clazz) {
-        PluralRule retVal = null;
+        PluralRule retVal;
         try {
             String pluralClassName = clazz.getName() + "_" + this.getLocale().getLanguage();
             try {

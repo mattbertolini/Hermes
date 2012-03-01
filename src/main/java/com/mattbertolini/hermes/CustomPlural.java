@@ -41,7 +41,7 @@ public class CustomPlural implements Plural {
     }
     
     public static Plural fromNumber(PluralRule rule, int num) {
-        Plural retVal = null;
+        Plural retVal;
         int index = rule.select(num);
         String ruleName = rule.pluralForms()[index].getName();
         if(ruleName == null || ruleName.equals(EMPTY_STRING) || ruleName.equals(OTHER)) {

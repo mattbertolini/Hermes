@@ -100,27 +100,24 @@ public class ConstantsProxy extends AbstractI18nProxy {
     }
     
     private Object getDefaultValue(Method method) {
-        //
         Object retVal;
         Class<?> returnType = method.getReturnType();
         if(int.class.equals(returnType)) {
-            //
             DefaultIntValue defaultValue = method.getAnnotation(DefaultIntValue.class);
-            retVal = Integer.valueOf(defaultValue.value());
+            retVal = defaultValue.value();
         } else if(float.class.equals(returnType)) {
             DefaultFloatValue defaultValue = method.getAnnotation(DefaultFloatValue.class);
-            retVal = Float.valueOf(defaultValue.value());
+            retVal = defaultValue.value();
         } else if(double.class.equals(returnType)) {
             DefaultDoubleValue defaultValue = method.getAnnotation(DefaultDoubleValue.class);
-            retVal = Double.valueOf(defaultValue.value());
+            retVal = defaultValue.value();
         } else if(boolean.class.equals(returnType)) {
             DefaultBooleanValue defaultValue = method.getAnnotation(DefaultBooleanValue.class);
-            retVal = Boolean.valueOf(defaultValue.value());
+            retVal = defaultValue.value();
         } else if(returnType.isArray() && String.class.equals(returnType.getComponentType())) {
             DefaultStringArrayValue defaultValue = method.getAnnotation(DefaultStringArrayValue.class);
             retVal = defaultValue.value();
         } else if(Map.class.equals(returnType)) {
-            //
             DefaultStringMapValue defaultValue = method.getAnnotation(DefaultStringMapValue.class);
             String[] keysValues = defaultValue.value();
             Map<String, String> strMap = new HashMap<String, String>();

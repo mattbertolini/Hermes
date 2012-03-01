@@ -46,7 +46,7 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
                 if(name == null || name.isEmpty()) {
                     throw new MissingResourceException("Null or empty method name given.", this.getI18nClass().getName(), name);
                 }
-                Method m = this.getI18nClass().getMethod(name, new Class<?>[0]);
+                Method m = this.getI18nClass().getMethod(name);
                 retVal = this.parseConstant(m);
             } catch (SecurityException e) {
                 throw new RuntimeException(e);

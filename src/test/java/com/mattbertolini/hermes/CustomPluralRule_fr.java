@@ -36,7 +36,7 @@ public class CustomPluralRule_fr extends CustomPluralRule {
 
     @Override
     public int select(int n) {
-        int retVal = 0;
+        int retVal;
         if(n == 1) {
             retVal = 1;
         } else if(n == 24) {
