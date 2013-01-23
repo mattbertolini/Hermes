@@ -108,14 +108,14 @@
 	
     <target name="compile-source" depends="create-paths">
         <depend srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" cache="${build.temp.dir}" closure="true"/>
-        <javac srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+        <javac srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" source="1.6" target="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
             <classpath refid="compile-source-classpath"/>
         </javac>
     </target>
 	
     <target name="compile-tests" depends="compile-source">
         <depend srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" cache="${build.temp.dir}" closure="true"/>
-        <javac srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" source="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+        <javac srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" source="1.6" target="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
             <classpath refid="compile-tests-classpath"/>
         </javac>
     </target>
