@@ -51,7 +51,8 @@ public class Hermes {
      * For a given interface and locale ,retrieves the GWT i18n interface as a 
      * dynamic proxy for use on the server-side. If no locale is given, the 
      * default properties file will be loaded. This method caches proxy classes 
-     * that it has created so it is safe to call multiple times.
+     * that it has created so it is safe to call multiple times. Locale IDs
+     * are case-sensitive (i.e. en_us is not the same as en_US).
      * 
      * @param clazz The GWT i18n interface to get the proxy for.
      * @param localeStr The locale ID string for the locale being requested.

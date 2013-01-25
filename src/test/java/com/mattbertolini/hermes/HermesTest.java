@@ -77,7 +77,7 @@ public class HermesTest {
     
     @Test
     public void testMessageWithPrivateUseTag() throws IOException {
-        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "en_us_x_priv");
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "en_US_X_PRIV");
         String expected = "This is loaded from the private extension file.";
         String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
