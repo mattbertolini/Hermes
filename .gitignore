@@ -6,3 +6,6 @@
 .classpath
 .project
 .fbprefs
+/target/
+/.idea/
+/Hermes.iml

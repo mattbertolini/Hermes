@@ -17,9 +17,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 -->
-<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://ant.apache.org/ivy/schemas/ivy.xsd">
     <info organisation="com.mattbertolini" module="hermes" status="integration" revision="${project.version}">
-        <license name="GNU Lesser General Public License 2.1" url="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
+        <license name="GNU Lesser General Public License 2.1" url="https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
         <ivyauthor name="Matt Bertolini"/>
         <description homepage="https://github.com/MaliciousMonkey/Hermes">GWT Server-side I18N Library</description>
     </info>
@@ -38,8 +38,7 @@
         <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0"/>
         <dependency org="com.ibm.icu" name="icu4j" rev="4.6"/>
         <dependency org="junit" name="junit" rev="4.8.2" conf="test->default"/>
-        <dependency org="emma" name="emma" rev="2.1.5320" conf="build->default"/>
-        <dependency org="emma" name="emma_ant" rev="2.1.5320" conf="build->default"/>
+        <dependency org="org.jacoco" name="org.jacoco.ant" rev="0.8.15" />
         <dependency org="com.google.code.findbugs" name="findbugs" rev="2.0.0" conf="build->default"/>
         <dependency org="com.google.code.findbugs" name="findbugs-ant" rev="2.0.0" conf="build->default"/>
     </dependencies>

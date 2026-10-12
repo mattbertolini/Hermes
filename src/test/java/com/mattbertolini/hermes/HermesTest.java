@@ -21,24 +21,23 @@ package com.mattbertolini.hermes;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Locale;
 
+import com.ibm.icu.util.ULocale;
 import junit.framework.Assert;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 
 public class HermesTest {
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        Locale.setDefault(Locale.US);
+        ULocale.setDefault(ULocale.US);
     }
 
-    @After
-    public void tearDown() throws Exception {
-    }
-    
     @Test(expected = IllegalArgumentException.class)
     public void testNullClassArgument() throws IOException {
         Hermes.get(null, "en_US");
@@ -82,12 +81,52 @@ public class HermesTest {
         String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
     }
-    
+
     @Test
     public void testFallbackFileLoading() throws IOException {
         MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "fr_CA");
         String expected = "[fr] This is a basic message with a key with a different name.";
         String actual = testData.BasicMessageWithKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testSubclassInheritsSuperclassProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "[fr] This is a basic message with a key with a different name.";
+        String actual = testData.BasicMessageWithKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testClassOverridesSuperclassProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a subclass message with no key.";
+        String actual = testData.SubClassMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnDefaultLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a subclass message with no key.";
+        String actual = testData.SubClassMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnParentLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a subclass message from French locale.";
+        String actual = testData.SubClassMessageForFrLocaleOverride();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnSpecifiedLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is another subclass message from Canadian French locale.";
+        String actual = testData.SubClassMessageForFrCALocaleOverride();
         Assert.assertEquals(expected, actual);
     }
 }

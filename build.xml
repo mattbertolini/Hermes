@@ -17,76 +17,75 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 -->
-<project name="hermes" basedir="." default="dist" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:emma="antlib:net.sf.emma" xmlns:findbugs="antlib:edu.umd.cs.findbugs">
-	<property file="build.properties"/>
-    
+<project name="hermes" basedir="." default="dist" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:jacoco="antlib:org.jacoco.ant" xmlns:findbugs="antlib:edu.umd.cs.findbugs">
+    <property file="build.properties"/>
+
     <condition property="offline" value="true" else="false">
-        <not>    
-            <http url="http://www.google.com/"/>
+        <not>
+            <http url="https://www.google.com/"/>
         </not>
     </condition>
-	
+
     <target name="clean">
         <delete dir="${build.dir}"/>
-    	<delete dir="${dist.dir}"/>
+        <delete dir="${dist.dir}"/>
     </target>
 
-	<target name="init" depends="clean">
-	    <mkdir dir="${lib.compile.dir}"/>
-	    <mkdir dir="${lib.test.dir}"/>
-	    <mkdir dir="${lib.build.dir}"/>
-		<mkdir dir="${build.classes.dir}"/>
-		<mkdir dir="${build.test.classes.dir}"/>
-	    <mkdir dir="${build.test.resources.dir}"/>
-		<mkdir dir="${build.instrumentedclasses.dir}"/>
-		<mkdir dir="${build.javadoc.dir}"/>
-		<mkdir dir="${build.reports.dependency.dir}"/>
-		<mkdir dir="${build.reports.unittest.dir}"/>
-		<mkdir dir="${build.reports.coverage.dir}"/>
-	    <mkdir dir="${build.reports.findbugs.dir}"/>
-	    <mkdir dir="${build.temp.dir}"/>
-		<mkdir dir="${dist.dir}"/>
-	</target>
-    
-    <target name="download-ivy" depends="init" unless="${offline}">
-        <get src="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${project.ivy.version}/ivy-${project.ivy.version}.jar" dest="${lib.build.dir}/ivy-${project.ivy.version}.jar" usetimestamp="true"/>
+    <target name="init" depends="clean">
+        <mkdir dir="${lib.compile.dir}"/>
+        <mkdir dir="${lib.test.dir}"/>
+        <mkdir dir="${lib.build.dir}"/>
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${build.test.classes.dir}"/>
+        <mkdir dir="${build.test.resources.dir}"/>
+        <mkdir dir="${build.javadoc.dir}"/>
+        <mkdir dir="${build.reports.dependency.dir}"/>
+        <mkdir dir="${build.reports.unittest.dir}"/>
+        <mkdir dir="${build.reports.coverage.dir}"/>
+        <mkdir dir="${build.reports.findbugs.dir}"/>
+        <mkdir dir="${build.temp.dir}"/>
+        <mkdir dir="${dist.dir}"/>
     </target>
-    
+
+    <target name="download-ivy" depends="init" unless="${offline}">
+        <get src="https://repo1.maven.org/maven2/org/apache/ivy/ivy/${project.ivy.version}/ivy-${project.ivy.version}.jar" dest="${lib.build.dir}/ivy-${project.ivy.version}.jar" usetimestamp="true"/>
+    </target>
+
     <target name="init-ivy" depends="download-ivy">
         <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="${lib.build.dir}/ivy-${project.ivy.version}.jar"/>
     </target>
-	
-	<target name="retrieve-dependencies" depends="init-ivy">
-		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>
-		<ivy:report todir="${build.reports.dependency.dir}"/>
-	    <ivy:artifactproperty name="dependency.[conf].[artifact]" value="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
-	</target>
-    
+
+    <target name="retrieve-dependencies" depends="init-ivy">
+        <ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>
+        <ivy:report todir="${build.reports.dependency.dir}"/>
+        <ivy:artifactproperty name="dependency.[conf].[artifact]" value="${lib.dir}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
+    </target>
+
     <target name="create-paths" depends="retrieve-dependencies">
         <path id="build-classpath">
             <fileset dir="${lib.build.dir}"/>
         </path>
-        
+
         <path id="compile-classpath">
             <fileset dir="${lib.compile.dir}"/>
         </path>
-        
+
         <path id="test-classpath">
             <fileset dir="${lib.test.dir}"/>
         </path>
-        
+
         <path id="compile-source-classpath">
             <path refid="compile-classpath"/>
         </path>
-        
+
         <path id="compile-tests-classpath">
             <path location="${build.classes.dir}"/>
             <path refid="compile-classpath"/>
             <path refid="test-classpath"/>
         </path>
-        
+
         <path id="run-tests-classpath">
-            <path location="${build.instrumentedclasses.dir}"/>
+            <path location="${build.classes.dir}"/>
             <path location="${build.test.classes.dir}"/>
             <path location="${build.test.resources.dir}"/>
             <path refid="compile-classpath"/>
@@ -94,69 +93,71 @@
             <path refid="build-classpath"/>
         </path>
     </target>
-    
-    <target name="load-third-party-tasks" depends="create-paths">       
-        <taskdef resource="emma_ant.properties" uri="antlib:net.sf.emma" classpathref="build-classpath"/>
+
+    <target name="load-third-party-tasks" depends="create-paths">
         <taskdef resource="edu/umd/cs/findbugs/anttask/tasks.properties" classpathref="build-classpath" uri="antlib:edu.umd.cs.findbugs"/>
     </target>
-    
+
     <target name="sync-test-resources" depends="init">
         <sync todir="${build.test.resources.dir}">
             <fileset dir="${src.test.resources.dir}"/>
         </sync>
     </target>
-	
+
     <target name="compile-source" depends="create-paths">
         <depend srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" cache="${build.temp.dir}" closure="true"/>
-        <javac srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" source="1.6" target="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+        <javac srcdir="${src.main.java.dir}" destdir="${build.classes.dir}" release="8" fork="false" failonerror="true" includeantruntime="false" debug="true">
             <classpath refid="compile-source-classpath"/>
         </javac>
     </target>
-	
+
     <target name="compile-tests" depends="compile-source">
         <depend srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" cache="${build.temp.dir}" closure="true"/>
-        <javac srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" source="1.6" target="1.6" fork="false" failonerror="true" includeantruntime="false" debug="true">
+        <javac srcdir="${src.test.java.dir}" destdir="${build.test.classes.dir}" release="8" fork="false" failonerror="true" includeantruntime="false" debug="true">
             <classpath refid="compile-tests-classpath"/>
         </javac>
     </target>
-	
+
     <target name="run-tests" depends="load-third-party-tasks, sync-test-resources, compile-tests">
-        <sync todir="${build.instrumentedclasses.dir}">
-            <fileset dir="${build.classes.dir}"/>
-        </sync>
-        <emma:emma enabled="true">
-            <instr instrpath="${build.instrumentedclasses.dir}" destdir="${build.instrumentedclasses.dir}" mode="overwrite" metadatafile="${build.reports.coverage.dir}/metadata.emma" merge="true"/>
-        </emma:emma>
-    	<junit haltonerror="false" haltonfailure="false" printsummary="true" errorproperty="test.failed" failureproperty="test.failed">
-            <classpath refid="run-tests-classpath"/>
-            <formatter type="xml"/>
-            <batchtest fork="true" todir="${build.reports.unittest.dir}">
-                <fileset dir="${build.test.classes.dir}">
-                    <include name="**/*Test.class"/>
-                </fileset>
-            </batchtest>
-            <jvmarg value="-Demma.coverage.out.file=${build.reports.coverage.dir}/coverage.emma"/>
-            <jvmarg value="-Demma.coverage.out.merge=true"/>
-        </junit>
-    	
+        <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="compile-source-classpath"/>
+
+        <jacoco:coverage destfile="${build.dir}/jacoco.exec">
+            <junit fork="true" haltonerror="false" haltonfailure="false" printsummary="true" errorproperty="test.failed" failureproperty="test.failed">
+                <classpath refid="run-tests-classpath"/>
+                <formatter type="xml"/>
+                <batchtest fork="true" todir="${build.reports.unittest.dir}">
+                    <fileset dir="${build.test.classes.dir}">
+                        <include name="**/*Test.class"/>
+                    </fileset>
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
+
         <junitreport todir="${build.reports.unittest.dir}">
             <fileset dir="${build.reports.unittest.dir}">
                 <include name="TEST-*.xml"/>
             </fileset>
             <report format="frames" todir="${build.reports.unittest.dir}"/>
         </junitreport>
-    	
-        <emma:emma enabled="true">
-            <report sourcepath="${src.main.java.dir}">
-                <fileset dir="${build.reports.coverage.dir}">
-                    <include name="*.emma"/>
-                </fileset>
-                <html outfile="${build.reports.coverage.dir}/coverage.html"/>
-            </report>
-        </emma:emma>
-        <fail if="test.failed">One or more unit tests failed/errored. Check ${build.reports.unittest.dir} for details.</fail>
+
+        <jacoco:report>
+            <executiondata>
+                <file file="${build.dir}/jacoco.exec"/>
+            </executiondata>
+            <structure name="Hermes">
+                <classfiles>
+                    <fileset dir="${build.dir}/classes"/>
+                </classfiles>
+                <sourcefiles encoding="UTF-8">
+                    <fileset dir="${src.main.java.dir}"/>
+                </sourcefiles>
+            </structure>
+            <html destdir="${build.reports.coverage.dir}"/>
+        </jacoco:report>
+        <fail if="test.failed">One or more unit tests failed/errored. Check ${build.reports.unittest.dir} for details.
+        </fail>
     </target>
-    
+
     <target name="run-findbugs" depends="create-paths, load-third-party-tasks, compile-source, compile-tests">
         <path id="aux-classpath">
             <path refid="compile-classpath"/>
@@ -175,34 +176,31 @@
             </style>
         </xslt>
     </target>
-	
+
     <target name="javadoc" depends="retrieve-dependencies">
         <javadoc destdir="${build.javadoc.dir}" sourcepath="${src.main.java.dir}" classpathref="compile-source-classpath" failonerror="true" windowtitle="${project.javadoc.title}">
             <doctitle>${project.javadoc.title}</doctitle>
-            <link href="http://download.oracle.com/javase/6/docs/api/"/>
-            <link href="http://google-web-toolkit.googlecode.com/svn/javadoc/2.2/"/>
-            <link href="http://icu-project.org/apiref/icu4j/"/>
         </javadoc>
     </target>
-	
-	<target name="jar" depends="compile-source, run-tests">
+
+    <target name="jar" depends="compile-source, run-tests">
         <tstamp>
             <format property="build-date" pattern="yyyy-MM-dd"/>
         </tstamp>
         <jar destfile="${dist.dir}/${project.filename.jar}" basedir="${build.classes.dir}">
-        	<manifest>
-                <attribute name="Specification-Title" value="${project.name}" />
-                <attribute name="Specification-Version" value="${project.version}" />
-                <attribute name="Specification-Vendor" value="${project.vendor}" />
-                <attribute name="Implementation-Title" value="${project.name}" />
-                <attribute name="Implementation-Version" value="${project.version}" />
-                <attribute name="Implementation-Vendor" value="${project.vendor}" />
-                <attribute name="Build-Date" value="${build-date}" />
-                <attribute name="Sealed" value="false" />
+            <manifest>
+                <attribute name="Specification-Title" value="${project.name}"/>
+                <attribute name="Specification-Version" value="${project.version}"/>
+                <attribute name="Specification-Vendor" value="${project.vendor}"/>
+                <attribute name="Implementation-Title" value="${project.name}"/>
+                <attribute name="Implementation-Version" value="${project.version}"/>
+                <attribute name="Implementation-Vendor" value="${project.vendor}"/>
+                <attribute name="Build-Date" value="${build-date}"/>
+                <attribute name="Sealed" value="false"/>
             </manifest>
-    	</jar>
+        </jar>
     </target>
-	
+
     <target name="jar-javadoc" depends="javadoc">
         <jar destfile="${dist.dir}/${project.filename.jar.javadoc}" basedir="${build.javadoc.dir}"/>
     </target>
@@ -210,7 +208,7 @@
     <target name="jar-sources">
         <jar destfile="${dist.dir}/${project.filename.jar.sources}" basedir="${src.dir}"/>
     </target>
-	
+
     <target name="make-pom" depends="retrieve-dependencies">
         <ivy:makepom ivyfile="${basedir}/ivy.xml" pomfile="${dist.dir}/${project.filename.pom}" artifactpackaging="jar" templatefile="pom.xml">
             <mapping conf="compile" scope="compile"/>
@@ -218,7 +216,7 @@
             <mapping conf="build" scope="test"/>
         </ivy:makepom>
     </target>
-    
+
     <target name="archive-bin" depends="jar,jar-javadoc,jar-sources">
         <fileset id="bin-fileset" dir="${dist.dir}">
             <include name="${project.filename.jar}"/>
@@ -245,7 +243,7 @@
             <exclude name="**/*.project"/>
             <exclude name="**/*.classpath"/>
             <exclude name="**/.settings/"/>
-        	<exclude name="**/.fbprefs"/>
+            <exclude name="**/.fbprefs"/>
             <exclude name="**/lib/"/>
             <exclude name="**/bin/"/>
             <exclude name="**/build/"/>
