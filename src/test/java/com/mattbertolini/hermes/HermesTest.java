@@ -101,8 +101,8 @@ public class HermesTest {
     @Test
     public void testClassOverridesSuperclassProperties() throws IOException {
         SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
-        String expected = "This is a subclass message with no key.";
-        String actual = testData.SubClassMessageWithNoKey();
+        String expected = "This is a basic message with no key overridden by subclass.";
+        String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
     }
 
