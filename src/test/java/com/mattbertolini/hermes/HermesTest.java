@@ -129,4 +129,12 @@ public class HermesTest {
         String actual = testData.SubClassMessageForFrCALocaleOverride();
         Assert.assertEquals(expected, actual);
     }
+
+    @Test
+    public void testReturnPropertyFromSecondParentInterface() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "en_US");
+        String expected = "This is a basic message with no key from another parent interface.";
+        String actual = testData.OtherParentMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
 }

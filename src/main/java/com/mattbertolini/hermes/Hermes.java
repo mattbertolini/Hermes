@@ -105,8 +105,13 @@ public class Hermes {
         if (clazz.equals(ConstantsWithLookup.class) || clazz.equals(Constants.class) || clazz.equals(Messages.class)) {
             return new PropertiesLocalePair(new Properties(), locale);
         }
-        // Get parent properties first - assuming single inheritance
-        Properties properties = getPropertiesForClass(clazz.getInterfaces()[0], locale).getProperties();
+        // Get parent properties first - allowing for multiple inheritance
+        Properties properties = new Properties();
+        for (Class<?> parent : clazz.getInterfaces()) {
+            if (isValidSubclass(parent)) {
+                properties.putAll(getPropertiesForClass(parent, locale).getProperties());
+            }
+        }
 
         // This is the actual locale the proxy classes will be given. It may be
         // changed from the locale given by the user if a locale fallback is
@@ -171,11 +176,15 @@ public class Hermes {
     }
 
     private static void checkValidSubclass(Class<?> clazz) {
-        if (!ConstantsWithLookup.class.isAssignableFrom(clazz)
-                && !Constants.class.isAssignableFrom(clazz)
-                && !Messages.class.isAssignableFrom(clazz)) {
+        if (!isValidSubclass(clazz)) {
             throw new IllegalArgumentException("Class " + clazz.getName() + " does not implement required interfaces.");
         }
+    }
+
+    private static boolean isValidSubclass(Class<?> clazz) {
+        return ConstantsWithLookup.class.isAssignableFrom(clazz)
+                || Constants.class.isAssignableFrom(clazz)
+                || Messages.class.isAssignableFrom(clazz);
     }
 
     static class PropertiesLocalePair {

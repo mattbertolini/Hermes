@@ -19,7 +19,7 @@
 
 package com.mattbertolini.hermes;
 
-public interface SubMessagesProxyTestData extends MessagesProxyTestData {
+public interface SubMessagesProxyTestData extends MessagesProxyTestData, OtherParentMessagesProxyTestData, NoI18nInterface {
     String SubClassMessageWithNoKey();
     String SubClassMessageForFrLocaleOverride();
     String SubClassMessageForFrCALocaleOverride();
