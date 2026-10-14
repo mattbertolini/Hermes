@@ -108,8 +108,6 @@ public class Hermes {
         // Get parent properties first - assuming single inheritance
         Properties properties = getPropertiesForClass(clazz.getInterfaces()[0], locale).getProperties();
 
-        InputStream is = null;
-        InputStreamReader reader = null;
         // This is the actual locale the proxy classes will be given. It may be
         // changed from the locale given by the user if a locale fallback is
         // required.
@@ -127,12 +125,14 @@ public class Hermes {
             // Build properties with more specific locale overriding less specific locale
             boolean propertiesFileFound = false;
             for (ULocale currentLocale : localeChain) {
-                is = getPropertiesFile(clazz, currentLocale);
-                if (is != null) {
-                    reader = new InputStreamReader(is, UTF_8);
-                    properties.load(reader);
-                    realLocale = currentLocale;
-                    propertiesFileFound = true;
+                try (InputStream is = getPropertiesFile(clazz, currentLocale)) {
+                    if (is != null) {
+                        try (InputStreamReader reader = new InputStreamReader(is, UTF_8)) {
+                            properties.load(reader);
+                            realLocale = currentLocale;
+                            propertiesFileFound = true;
+                        }
+                    }
                 }
             }
             if (realLocale == null) {
@@ -144,13 +144,6 @@ public class Hermes {
             return new PropertiesLocalePair(properties, realLocale);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 encoding not found.", e);
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
-            if (is != null) {
-                is.close();
-            }
         }
     }
 
