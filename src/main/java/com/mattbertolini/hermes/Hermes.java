@@ -27,10 +27,10 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gwt.i18n.client.Constants;
 import com.google.gwt.i18n.client.ConstantsWithLookup;
@@ -47,7 +47,7 @@ public class Hermes {
     private static final String PROPERTIES_EXT = ".properties";
     private static final String UTF_8 = "UTF-8";
 
-    private static Map<LocaleMapKey, Object> cache = new HashMap<LocaleMapKey, Object>();
+    private static Map<LocaleMapKey, Object> cache = new ConcurrentHashMap<>();
 
     /**
      * For a given interface and locale ,retrieves the GWT i18n interface as a
