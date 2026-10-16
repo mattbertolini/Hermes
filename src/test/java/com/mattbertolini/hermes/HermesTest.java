@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Locale;
 
+import com.google.gwt.i18n.client.Messages;
 import com.ibm.icu.util.ULocale;
 import junit.framework.Assert;
 
@@ -33,7 +34,7 @@ import org.junit.Test;
 public class HermesTest {
 
     @BeforeClass
-    public static void beforeClass() throws Exception {
+    public static void beforeClass() {
         Locale.setDefault(Locale.US);
         ULocale.setDefault(ULocale.US);
     }
@@ -136,5 +137,34 @@ public class HermesTest {
         String expected = "This is a basic message with no key from another parent interface.";
         String actual = testData.OtherParentMessageWithNoKey();
         Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testMessagesWithoutPropertiesFileDoesNotFail() throws IOException {
+        NoPropertiesFileParentTestData testData = Hermes.get(NoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testParentWithoutPropertiesFileDoesNotFail() throws IOException {
+        ChildOfNoPropertiesFileParentTestData testData = Hermes.get(ChildOfNoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Child message from properties file.", testData.ChildMessage());
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testParentWithoutPropertiesFileUsesAnnotationDefault() throws IOException {
+        ChildOfNoPropertiesFileParentTestData testData = Hermes.get(ChildOfNoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testNestedInterfaceLoadsBinaryNamedPropertiesFile() throws IOException {
+        NestedMessagesTestData testData = Hermes.get(NestedMessagesTestData.class, "en_US");
+        Assert.assertEquals("Nested interface message.", testData.NestedMessage());
+    }
+
+    public interface NestedMessagesTestData extends Messages {
+        String NestedMessage();
     }
 }

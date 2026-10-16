@@ -24,8 +24,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +46,9 @@ import com.ibm.icu.util.ULocale;
  */
 public class Hermes {
     private static final char DOT = '.';
-    private static final char SLASH = '/';
     private static final String PROPERTIES_EXT = ".properties";
-    private static final String UTF_8 = "UTF-8";
 
-    private static Map<LocaleMapKey, Object> cache = new ConcurrentHashMap<>();
+    private static final Map<LocaleMapKey, Object> cache = new ConcurrentHashMap<>();
 
     /**
      * For a given interface and locale ,retrieves the GWT i18n interface as a
@@ -132,7 +133,7 @@ public class Hermes {
             for (ULocale currentLocale : localeChain) {
                 try (InputStream is = getPropertiesFile(clazz, currentLocale)) {
                     if (is != null) {
-                        try (InputStreamReader reader = new InputStreamReader(is, UTF_8)) {
+                        try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
                             properties.load(reader);
                             realLocale = currentLocale;
                             propertiesFileFound = true;
@@ -144,11 +145,51 @@ public class Hermes {
                 realLocale = ULocale.getDefault();
             }
             if (!propertiesFileFound) {
-                throw new FileNotFoundException("Could not find any properties files matching the given class.");
+                checkPropertyFileNeeded(clazz);
             }
             return new PropertiesLocalePair(properties, realLocale);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 encoding not found.", e);
+        }
+    }
+
+    // If a property file has not been provided, check all properties have valid annotations
+    private static <T> void checkPropertyFileNeeded(Class<T> clazz) throws FileNotFoundException {
+        boolean isMessagesInterface = Messages.class.isAssignableFrom(clazz);
+        boolean isConstantsInterface = Constants.class.isAssignableFrom(clazz);
+
+        Method[] declaredMethods = clazz.getDeclaredMethods();
+        for (Method method : declaredMethods) {
+            boolean i18nAnnotationFound = false;
+
+            Annotation[] annotations = method.getDeclaredAnnotations();
+            for (Annotation annotation : annotations) {
+                Class<? extends Annotation> type = annotation.annotationType();
+
+                if (isMessagesInterface && (
+                        Messages.DefaultMessage.class.equals(type) ||
+                        Messages.AlternateMessage.class.equals(type))) {
+                    i18nAnnotationFound = true;
+                    break;
+                }
+
+                if (isConstantsInterface && (
+                        Constants.DefaultBooleanValue.class.equals(type) ||
+                        Constants.DefaultIntValue.class.equals(type) ||
+                        Constants.DefaultDoubleValue.class.equals(type) ||
+                        Constants.DefaultFloatValue.class.equals(type) ||
+                        Constants.DefaultStringValue.class.equals(type) ||
+                        Constants.DefaultStringMapValue.class.equals(type) ||
+                        Constants.DefaultStringArrayValue.class.equals(type))) {
+                    i18nAnnotationFound = true;
+                    break;
+                }
+            }
+
+            if (!i18nAnnotationFound) {
+                // No annotation found for the property - we are missing a property file
+                throw new FileNotFoundException("Could not find any properties files matching the class: " + clazz.getName());
+            }
         }
     }
 
@@ -172,7 +213,18 @@ public class Hermes {
         if (locale != null) {
             localeStr = '_' + locale.getName();
         }
-        return clazz.getSimpleName().replace(DOT, SLASH) + localeStr + PROPERTIES_EXT;
+        return getPropertiesClassname(clazz) + localeStr + PROPERTIES_EXT;
+    }
+
+    // Return class name without package prefix
+    // Works for nested classes where getSimpleName() doesn't
+    private static <T> String getPropertiesClassname(Class<T> clazz) {
+        String classname = clazz.getName();
+        int lastDot = classname.lastIndexOf(DOT);
+        if (lastDot >= 0 && lastDot < classname.length() + 1) {
+            classname = classname.substring(classname.lastIndexOf(DOT) + 1);
+        }
+        return classname;
     }
 
     private static void checkValidSubclass(Class<?> clazz) {
