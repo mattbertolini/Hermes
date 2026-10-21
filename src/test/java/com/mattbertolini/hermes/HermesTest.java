@@ -21,24 +21,24 @@ package com.mattbertolini.hermes;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Locale;
 
+import com.google.gwt.i18n.client.Messages;
+import com.ibm.icu.util.ULocale;
 import junit.framework.Assert;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 
 public class HermesTest {
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void beforeClass() {
+        Locale.setDefault(Locale.US);
+        ULocale.setDefault(ULocale.US);
     }
 
-    @After
-    public void tearDown() throws Exception {
-    }
-    
     @Test(expected = IllegalArgumentException.class)
     public void testNullClassArgument() throws IOException {
         Hermes.get(null, "en_US");
@@ -82,12 +82,89 @@ public class HermesTest {
         String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
     }
-    
+
     @Test
     public void testFallbackFileLoading() throws IOException {
         MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "fr_CA");
         String expected = "[fr] This is a basic message with a key with a different name.";
         String actual = testData.BasicMessageWithKey();
         Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testSubclassInheritsSuperclassProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "[fr] This is a basic message with a key with a different name.";
+        String actual = testData.BasicMessageWithKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testClassOverridesSuperclassProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a basic message with no key overridden by subclass.";
+        String actual = testData.BasicMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnDefaultLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a subclass message with no key.";
+        String actual = testData.SubClassMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnParentLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is a subclass message from French locale.";
+        String actual = testData.SubClassMessageForFrLocaleOverride();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnSpecifiedLocaleProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "This is another subclass message from Canadian French locale.";
+        String actual = testData.SubClassMessageForFrCALocaleOverride();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testReturnPropertyFromSecondParentInterface() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "en_US");
+        String expected = "This is a basic message with no key from another parent interface.";
+        String actual = testData.OtherParentMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testMessagesWithoutPropertiesFileDoesNotFail() throws IOException {
+        NoPropertiesFileParentTestData testData = Hermes.get(NoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testParentWithoutPropertiesFileDoesNotFail() throws IOException {
+        ChildOfNoPropertiesFileParentTestData testData = Hermes.get(ChildOfNoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Child message from properties file.", testData.ChildMessage());
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testParentWithoutPropertiesFileUsesAnnotationDefault() throws IOException {
+        ChildOfNoPropertiesFileParentTestData testData = Hermes.get(ChildOfNoPropertiesFileParentTestData.class, "en_US");
+        Assert.assertEquals("Parent message from annotation.", testData.ParentMessageFromAnnotation());
+    }
+
+    @Test
+    public void testNestedInterfaceLoadsBinaryNamedPropertiesFile() throws IOException {
+        NestedMessagesTestData testData = Hermes.get(NestedMessagesTestData.class, "en_US");
+        Assert.assertEquals("Nested interface message.", testData.NestedMessage());
+    }
+
+    public interface NestedMessagesTestData extends Messages {
+        String NestedMessage();
     }
 }

@@ -21,11 +21,14 @@ package com.mattbertolini.hermes;
 
 import java.math.BigDecimal;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
+import com.ibm.icu.util.ULocale;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.gwt.safehtml.shared.SafeHtml;
@@ -36,7 +39,13 @@ public class MessagesProxyTest {
     
     private MessagesProxyTestData testData;
     private TimeZone originalTimeZone;
-    
+
+    @BeforeClass
+    public static void beforeClass() {
+        Locale.setDefault(Locale.US);
+        ULocale.setDefault(ULocale.US);
+    }
+
     @Before
     public void setUp() throws Exception {
         this.testData = Hermes.get(MessagesProxyTestData.class, "en_US");
