@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,12 @@ package com.mattbertolini.hermes;
 
 import com.ibm.icu.text.PluralRules;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+
+import static java.util.stream.Collectors.toMap;
+
 public enum GwtPlural implements Plural {
     ZERO(PluralRules.KEYWORD_ZERO, "none"),
     ONE(PluralRules.KEYWORD_ONE, "one"),
@@ -28,11 +34,15 @@ public enum GwtPlural implements Plural {
     FEW(PluralRules.KEYWORD_FEW, "few"),
     MANY(PluralRules.KEYWORD_MANY, "many"),
     OTHER(PluralRules.KEYWORD_OTHER, "other");
+
+    private static final Map<String, GwtPlural> ICU_VALUE_LOOKUP_MAP = Arrays.stream(values())
+            .collect(toMap(GwtPlural::getIcuValue, Function.identity())
+    );
     
-    private String icuValue;
-    private String gwtValue;
+    private final String icuValue;
+    private final String gwtValue;
     
-    private GwtPlural(String icuValue, String gwtValue) {
+    GwtPlural(String icuValue, String gwtValue) {
         this.icuValue = icuValue;
         this.gwtValue = gwtValue;
     }
@@ -48,13 +58,6 @@ public enum GwtPlural implements Plural {
     
     public static Plural fromNumber(PluralRules pluralRules, double number) {
         String icuValue = pluralRules.select(number);
-        Plural retVal = null;
-        for(GwtPlural plural : GwtPlural.values()) {
-            if(plural.getIcuValue().equals(icuValue)) {
-                retVal = plural;
-                break;
-            }
-        }
-        return retVal;
+        return ICU_VALUE_LOOKUP_MAP.get(icuValue);
     }
 }
