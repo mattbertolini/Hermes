@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Hermes - GWT Server-side I18N Library
-  Copyright (C) 2012  Matt Bertolini
+  Copyright (C) 2012-2026  Matt Bertolini
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,7 @@
     <info organisation="com.mattbertolini" module="hermes" status="integration" revision="${project.version}">
         <license name="GNU Lesser General Public License 2.1" url="https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
         <ivyauthor name="Matt Bertolini"/>
-        <description homepage="https://github.com/MaliciousMonkey/Hermes">GWT Server-side I18N Library</description>
+        <description homepage="https://github.com/mattbertolini/Hermes">GWT Server-side I18N Library</description>
     </info>
     <configurations>
         <conf name="compile"/>
