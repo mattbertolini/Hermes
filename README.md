@@ -1,0 +1,76 @@
+# Hermes - GWT Server-side I18N Library
+Written By Matt Bertolini
+
+## About Hermes
+
+Hermes gives developers using GWT the ability to use their I18N properties files 
+on the server-side. This library is a fork of the gwt-i18n-server project 
+located at http://code.google.com/p/gwt-i18n-server/. Hermes supports the 
+Messages, Constants, and ConstantsWithLookup interfaces. SafeHtml, Date and 
+number formatting, and Plural forms are supported on the Messages interfaces.
+
+## License
+
+Hermes is licensed under the GNU Lesser General Public License v2.1. See the 
+LICENSE file for full license information.
+
+## Requirements
+
+Hermes version 1.2 requires Java 1.6, GWT 2.2, and ICU 4.6 to run. If you need 
+GWT 2.1 support, use the 1.1.x line.
+
+## Differences Between Hermes and GWT I18N
+
+* Since the server side does not have access to the GWT locale information, you 
+  are required to pass the locale to Hermes in order to get the correct data.
+
+* The locale hierarchy and fallback system as described in the GWT Constants 
+  Javadoc is not supported. The locale given to Hermes must match a valid 
+  properties file or it will use the default properties file.
+  
+* Plural form exact values and offsets are not supported.
+
+* GWT extension {name,text}, {0,list}, {0,localdatetime,skeleton}, and extra 
+  formatter arguments are not supported.  
+  
+## Maven Artifact Info
+
+You can get Hermes through the Maven central repository. here is the artifact 
+snippet.
+
+<dependency>
+  <groupId>com.mattbertolini</groupId>
+  <artifactId>hermes</artifactId>
+  <version>1.2.0</version>
+</dependency>
+
+## Frequently Asked Questions
+
+### Why did you fork gwt-i18n-server?
+
+I forked the gwt-i18n-server library because development appeared to be dormant 
+on the existing codebase and I needed bugs fixed. I had submitted some patches 
+to the original developer but no work had been done on the code for over a year. 
+I made the decision to fix the bugs myself and the fork was born. Just about 
+every line of code has been re-written to make the library more compatible with 
+GWT I18N implementation.
+
+### I found a bug. What do I do?
+
+If you find a bug or other issue with Hermes, please file an issue at 
+https://github.com/mattbertolini/Hermes/issues. When filing a bug, please 
+provide the following information:
+
+* Version of Hermes
+* Version of GWT
+* Type of interface (Messages, Constants, ConstantsWithLookup)
+* The properties string that is not working
+* Any arguments passed to the method for inclusion into the string
+* The observed output
+* The expected output
+
+Giving this information will help me track down the issue and write unit tests 
+to make sure I fix the bug.
+
+Also, if you have found a bug and already found a fix, patches and pull 
+requests are welcome. Please make sure you include unit tests to verify the fix.
