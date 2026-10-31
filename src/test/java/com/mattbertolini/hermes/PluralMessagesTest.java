@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,8 @@
 package com.mattbertolini.hermes;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -399,5 +401,44 @@ public class PluralMessagesTest {
         String otherExpected = "You have one message and one notification.";
         String otherActual = testData.PluralMessageMultiplePluralCountDefault(1, 1);
         Assert.assertEquals(otherExpected, otherActual);
+    }
+
+    @Test
+    public void testPluralMessageArrayParamUsesLength() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        Assert.assertEquals("You have one item.", testData.PluralMessageArrayParam(new String[] {"a"}));
+        Assert.assertEquals("You have 3 items.", testData.PluralMessageArrayParam(new String[] {"a", "b", "c"}));
+    }
+
+    @Test
+    public void testPluralMessageListParamUsesSize() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        Assert.assertEquals("You have one item.", testData.PluralMessageListParam(Collections.singletonList("a")));
+        Assert.assertEquals("You have 2 items.", testData.PluralMessageListParam(Arrays.asList("a", "b")));
+    }
+
+    @Test
+    public void testPluralMessageWithOffset() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        Assert.assertEquals("No one has recommended this movie", testData.PluralMessageWithOffset(null, null, 0));
+        Assert.assertEquals("John has recommended this movie", testData.PluralMessageWithOffset("John", null, 1));
+        Assert.assertEquals("John and Jane have recommended this movie", testData.PluralMessageWithOffset("John", "Jane", 2));
+        Assert.assertEquals("John, Jane and one other have recommended this movie", testData.PluralMessageWithOffset("John", "Jane", 3));
+        Assert.assertEquals("John, Jane and 1,400 others have recommended this movie", testData.PluralMessageWithOffset("John", "Jane", 1402));
+    }
+
+    @Test
+    public void testPluralMessageExactValueFromPropertiesFile() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        Assert.assertEquals("You have nothing.", testData.PluralMessageExactValue(0));
+        Assert.assertEquals("You have one thing.", testData.PluralMessageExactValue(1));
+        Assert.assertEquals("You have 5 things.", testData.PluralMessageExactValue(5));
+    }
+
+    @Test
+    public void testPluralCountOnUnsupportedTypeThrows() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class, () -> testData.PluralMessageLongParam(5L));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("PluralMessageLongParam"));
     }
 }

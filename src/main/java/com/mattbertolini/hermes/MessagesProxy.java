@@ -21,6 +21,7 @@ package com.mattbertolini.hermes;
 
 import com.google.gwt.i18n.client.Messages.AlternateMessage;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
+import com.google.gwt.i18n.client.Messages.Offset;
 import com.google.gwt.i18n.client.Messages.PluralCount;
 import com.google.gwt.i18n.client.Messages.PluralText;
 import com.google.gwt.i18n.client.Messages.Select;
@@ -32,9 +33,12 @@ import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -44,7 +48,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -52,8 +60,9 @@ import static java.util.stream.Collectors.toList;
 public class MessagesProxy extends AbstractI18nProxy {
     private static final Set<Class<?>> PLURAL_COUNT_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
             int.class, Integer.class, short.class, Short.class));
-    private static final Set<Class<?>> SELECT_NUMBER_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
-            int.class, long.class, float.class, short.class, double.class));
+    // GWT allows integral primitives and boolean. float and double are a Hermes extension.
+    private static final Set<Class<?>> SELECT_PRIMITIVE_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
+            int.class, long.class, short.class, byte.class, boolean.class, float.class, double.class));
     private static final char OPEN_BRACKET = '[';
     private static final char CLOSE_BRACKET = ']';
     private static final char SEPARATOR = '|';
@@ -71,8 +80,13 @@ public class MessagesProxy extends AbstractI18nProxy {
     }
 
     @FunctionalInterface
-    private interface AlternativeFormSelector {
-        String select(Object[] args);
+    private interface AlternateFormSelector {
+        List<String> select(Object[] args);
+    }
+
+    @FunctionalInterface
+    private interface ArgumentAdjuster {
+        void adjust(Object[] formatArgs);
     }
 
     @FunctionalInterface
@@ -82,7 +96,8 @@ public class MessagesProxy extends AbstractI18nProxy {
 
     private final class MessageHandler implements MethodHandler {
         private final String key;
-        private final List<AlternativeFormSelector> selectors;
+        private final List<AlternateFormSelector> selectors;
+        private final List<ArgumentAdjuster> adjusters;
         private final Map<String, String> alternateMessages;
         private final String defaultMessage;
         private final MessageRenderer renderer;
@@ -90,6 +105,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         public MessageHandler(Method method) {
             key = keyFor(method);
             selectors = buildSelectors(method);
+            adjusters = buildAdjusters(method);
             alternateMessages = buildAlternateMessages(key, method);
             defaultMessage = Optional.ofNullable(method.getAnnotation(DefaultMessage.class))
                     .map(DefaultMessage::value)
@@ -99,71 +115,145 @@ public class MessagesProxy extends AbstractI18nProxy {
 
         @Override
         public Object handle(Object[] args) {
-            List<String> forms = selectors.stream()
-                    .map(alternativeFormSelector -> alternativeFormSelector.select(args))
+            List<List<String>> candidates = selectors.stream()
+                    .map(alternateFormSelector -> alternateFormSelector.select(args))
                     .collect(toList());
-            String patternName = buildPatternName(key, forms);
-            MessageFormat formatter = new MessageFormat(findPattern(patternName), getLocale());
-            return renderer.render(formatter, args);
+            List<String> patternNames = combinations(candidates).stream()
+                    .map(forms -> buildPatternName(key, forms))
+                    .distinct()
+                    .collect(toList());
+            MessageFormat formatter = new MessageFormat(findPattern(patternNames), getLocale());
+            return renderer.render(formatter, adjust(args));
         }
 
-        private String findPattern(String patternName) {
-            return Stream.<Supplier<String>>of(
-                            () -> getProperties().getProperty(patternName),
-                            () -> alternateMessages.get(patternName),
-                            () -> getProperties().getProperty(key),
-                            () -> defaultMessage)
+        private String findPattern(List<String> patternNames) {
+            // For each candidate, the properties file overrides annotations.
+            Stream<Supplier<String>> specific = patternNames.stream()
+                    .flatMap(name -> Stream.of(
+                            () -> getProperties().getProperty(name),
+                            () -> alternateMessages.get(name)));
+            Stream<Supplier<String>> fallback = Stream.of(
+                    () -> getProperties().getProperty(key),
+                    () -> defaultMessage);
+            return Stream.concat(specific, fallback)
                     .map(Supplier::get)
                     .filter(Objects::nonNull)
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("No message found for key " + key));
         }
+
+        private Object[] adjust(Object[] args) {
+            if (adjusters.isEmpty()) {
+                return args;
+            }
+            Object[] formatArgs = args.clone();   // Selectors already used the raw values
+            adjusters.forEach(adjuster -> adjuster.adjust(formatArgs));
+            return formatArgs;
+        }
     }
 
-    private List<AlternativeFormSelector> buildSelectors(Method method) {
-        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        List<AlternativeFormSelector> selectors = new ArrayList<>();
-        for (int i = 0; i < parameterTypes.length; i++) {
-            for (Annotation annotation : parameterAnnotations[i]) {
-                AlternativeFormSelector selector = selectorFor(annotation, parameterTypes[i], i);
-                if (selector != null) {
-                    selectors.add(selector);
-                }
+    private List<AlternateFormSelector> buildSelectors(Method method) {
+        Parameter[] parameters = method.getParameters();
+        return IntStream.range(0, parameters.length)
+                .mapToObj(index -> selectorFor(parameters[index], index))
+                .filter(Objects::nonNull)
+                .collect(toList());
+    }
+
+    private AlternateFormSelector selectorFor(Parameter parameter, int index) {
+        PluralCount pluralCount = parameter.getAnnotation(PluralCount.class);
+        if (pluralCount != null) {
+            return pluralSelector(parameter, pluralCount, index);
+        }
+        if (parameter.isAnnotationPresent(Select.class)) {
+            SelectKind kind = SelectKind.forType(parameter.getType())
+                    .orElseThrow(() -> unsupported(Select.class, parameter, index,
+                            "an integral primitive, boolean, float, double, enum, or String"));
+            return args -> Collections.singletonList(kind.select(args[index]));
+        }
+        return null;   // Not a selector parameter
+    }
+
+    private AlternateFormSelector pluralSelector(Parameter parameter, PluralCount pluralCount, int index) {
+        ToIntFunction<Object> counter = countFor(parameter, index);
+        int offset = offsetOf(parameter);
+        IntFunction<String> pluralForms = pluralFormsFor(pluralCount.value());
+        return args -> {
+            int count = counter.applyAsInt(args[index]);
+            // Exact "=n" forms match the raw count; the offset only applies to the plural rule.
+            return Arrays.asList("=" + count, pluralForms.apply(count - offset));
+        };
+    }
+
+    private IntFunction<String> pluralFormsFor(Class<? extends PluralRule> ruleClass) {
+        if (ruleClass.isInterface()) {
+            return count -> GwtPlural.fromNumber(pluralRules, count).getGwtValue();
+        }
+        PluralRule rule = this.instantiateCustomPluralRuleClass(ruleClass);   // once, not per call
+        return count -> CustomPlural.fromNumber(rule, count).getGwtValue();
+    }
+
+    /** Every combination of one candidate per selector, in priority order. */
+    private static List<List<String>> combinations(List<List<String>> candidates) {
+        List<List<String>> result = Collections.singletonList(Collections.emptyList());
+        for (List<String> options : candidates) {
+            result = result.stream()
+                    .flatMap(prefix -> options.stream().map(option -> {
+                        List<String> next = new ArrayList<>(prefix);
+                        next.add(option);
+                        return next;
+                    }))
+                    .collect(toList());
+        }
+        return result;
+    }
+
+    /**
+     * Formatting a @PluralCount argument uses the same count the plural rule
+     * saw: the size of an array or List, minus any @Offset.
+     */
+    private static List<ArgumentAdjuster> buildAdjusters(Method method) {
+        Parameter[] parameters = method.getParameters();
+        List<ArgumentAdjuster> adjusters = new ArrayList<>();
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            int offset = offsetOf(parameter);
+            if (parameter.isAnnotationPresent(PluralCount.class) && (offset != 0 || isCollection(parameter.getType()))) {
+                ToIntFunction<Object> counter = countFor(parameter, i);
+                int index = i;
+                adjusters.add(formatArgs -> formatArgs[index] = counter.applyAsInt(formatArgs[index]) - offset);
             }
         }
-        return selectors;
+        return adjusters;
     }
 
-    private AlternativeFormSelector selectorFor(Annotation annotation, Class<?> type, int index) {
-        if (annotation instanceof PluralCount && isPluralCountType(type)) {
-            Class<? extends PluralRule> ruleClass = ((PluralCount) annotation).value();
-            if (ruleClass.isInterface()) {
-                return args -> GwtPlural.fromNumber(pluralRules, ((Number) args[index]).doubleValue()).getGwtValue();
-            }
-            PluralRule rule = this.instantiateCustomPluralRuleClass(ruleClass);   // once, not per call
-            return args -> CustomPlural.fromNumber(rule, ((Number) args[index]).intValue()).getGwtValue();
+    private static ToIntFunction<Object> countFor(Parameter parameter, int index) {
+        Class<?> type = parameter.getType();
+        if (PLURAL_COUNT_TYPES.contains(type)) {
+            return arg -> arg == null ? 0 : ((Number) arg).intValue();
         }
-        if (annotation instanceof Select) {
-            if (Enum.class.isAssignableFrom(type)) {
-                return args -> args[index] == null ? "other" : ((Enum<?>) args[index]).name();
-            }
-            if (String.class == type) {
-                return args -> args[index] == null ? "other" : (String) args[index];
-            }
-            if (isSelectNumberType(type)) {
-                return args -> args[index].toString();
-            }
+        if (type.isArray()) {
+            return arg -> arg == null ? 0 : Array.getLength(arg);
         }
-        return null;
+        if (type == List.class) {
+            return arg -> arg == null ? 0 : ((List<?>) arg).size();
+        }
+        throw unsupported(PluralCount.class, parameter, index, "int, short, an array, or List");
     }
 
-    private static boolean isPluralCountType(Class<?> type) {
-        return PLURAL_COUNT_TYPES.contains(type);
+    private static boolean isCollection(Class<?> type) {
+        return type.isArray() || type == List.class;
     }
 
-    private static boolean isSelectNumberType(Class<?> type) {
-        return SELECT_NUMBER_TYPES.contains(type);
+    private static int offsetOf(Parameter parameter) {
+        return Optional.ofNullable(parameter.getAnnotation(Offset.class)).map(Offset::value).orElse(0);
+    }
+
+    private static IllegalArgumentException unsupported(Class<? extends Annotation> annotation, Parameter parameter,
+                                                        int index, String allowed) {
+        return new IllegalArgumentException("@" + annotation.getSimpleName() + " parameter " + index + " of "
+                + parameter.getDeclaringExecutable().getName() + " must be " + allowed
+                + " but was " + parameter.getType().getName());
     }
 
     private static String formatPlain(MessageFormat formatter, Object[] args) {
@@ -242,6 +332,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         return retVal;
     }
     
+    @SuppressWarnings("deprecation")
     private Map<String, String> buildAlternateMessages(String baseName, Method method) {
         Map<String, String> retMap = new LinkedHashMap<>();
         AlternateMessage altMsgAnnotation = method.getAnnotation(AlternateMessage.class);
@@ -257,5 +348,40 @@ public class MessagesProxy extends AbstractI18nProxy {
             retMap.put(baseName + OPEN_BRACKET + values[i] + CLOSE_BRACKET, values[i + 1]);
         }
         return retMap;
+    }
+
+    private enum SelectKind {
+        ENUM(Enum.class::isAssignableFrom) {
+            @Override
+            String select(Object arg) {
+                return arg == null ? OTHER : ((Enum<?>) arg).name();
+            }
+        },
+        STRING(String.class::equals) {
+            @Override
+            String select(Object arg) {
+                return arg == null ? OTHER : (String) arg;
+            }
+        },
+        PRIMITIVE(SELECT_PRIMITIVE_TYPES::contains) {
+            @Override
+            String select(Object arg) {
+                return arg.toString();
+            }
+        };
+
+        private static final String OTHER = GwtPlural.OTHER.getGwtValue();
+
+        private final Predicate<Class<?>> matcher;
+
+        SelectKind(Predicate<Class<?>> matcher) {
+            this.matcher = matcher;
+        }
+
+        abstract String select(Object arg);
+
+        static Optional<SelectKind> forType(Class<?> type) {
+            return Arrays.stream(values()).filter(kind -> kind.matcher.test(type)).findFirst();
+        }
     }
 }

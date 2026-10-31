@@ -373,4 +373,16 @@ public class MessagesProxyTest {
         Assert.assertNotEquals(this.testData, Hermes.get(MessagesProxyTestData.class, "fr"));
         Assert.assertFalse(this.testData.equals(null));
     }
+
+    @Test
+    public void testMessageWithBooleanSelect() {
+        Assert.assertEquals("This is the true string.", this.testData.MessageWithBooleanSelect(true));
+        Assert.assertEquals("This is the boolean default string.", this.testData.MessageWithBooleanSelect(false));
+    }
+
+    @Test
+    public void testSelectOnUnsupportedTypeThrows() {
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class, () -> this.testData.MessageWithBoxedIntegerSelect(42));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("java.lang.Integer"));
+    }
 }

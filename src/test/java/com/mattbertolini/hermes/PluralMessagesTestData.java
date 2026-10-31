@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,6 +18,8 @@
  */
 
 package com.mattbertolini.hermes;
+
+import java.util.List;
 
 import com.google.gwt.i18n.client.Messages;
 
@@ -55,4 +57,27 @@ public interface PluralMessagesTestData extends Messages {
                        "other|one", "You have {0} messages and one notification.",
                        "one|other", "You have one message and {1} notifications."})
     String PluralMessageMultiplePluralCountDefault(@PluralCount int count1, @PluralCount int count2);
+
+    @DefaultMessage("You have {0} items.")
+    @AlternateMessage({"one", "You have one item."})
+    String PluralMessageArrayParam(@PluralCount String[] items);
+
+    @DefaultMessage("You have {0} items.")
+    @AlternateMessage({"one", "You have one item."})
+    String PluralMessageListParam(@PluralCount List<String> items);
+
+    // Example from the GWT @Offset javadoc
+    @DefaultMessage("{0}, {1} and {2,number} others have recommended this movie")
+    @AlternateMessage({
+            "=0", "No one has recommended this movie",
+            "=1", "{0} has recommended this movie",
+            "=2", "{0} and {1} have recommended this movie",
+            "one", "{0}, {1} and one other have recommended this movie"})
+    String PluralMessageWithOffset(@Optional String rec1, @Optional String rec2, @PluralCount @Offset(2) int count);
+
+    String PluralMessageExactValue(@PluralCount int count);
+
+    // Intentionally invalid: GWT only allows int, short, arrays and List for @PluralCount.
+    @DefaultMessage("Unused.")
+    String PluralMessageLongParam(@PluralCount long count);
 }

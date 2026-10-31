@@ -59,4 +59,9 @@ public interface MessagesProxyTestData extends Messages {
     String MessageWithFloatSelect(@Select float arg);
     String MessageWithShortSelect(@Select short arg);
     String MessageWithDoubleSelect(@Select double arg);
+    String MessageWithBooleanSelect(@Select boolean arg);
+
+    // Intentionally invalid: GWT does not allow boxed types for @Select.
+    @DefaultMessage("Unused.")
+    String MessageWithBoxedIntegerSelect(@Select Integer arg);
 }
