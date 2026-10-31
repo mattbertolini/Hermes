@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Hermes - GWT Server-side I18N Library
-  Copyright (C) 2012  Matt Bertolini
+  Copyright (C) 2011-2026  Matt Bertolini
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -119,7 +119,7 @@
     </target>
 
     <target name="run-tests" depends="load-third-party-tasks, sync-test-resources, compile-tests">
-        <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="compile-source-classpath"/>
+        <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="run-tests-classpath"/>
 
         <jacoco:coverage destfile="${build.dir}/jacoco.exec">
             <junit fork="true" haltonerror="false" haltonfailure="false" printsummary="true" errorproperty="test.failed" failureproperty="test.failed">

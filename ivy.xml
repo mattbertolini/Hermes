@@ -38,7 +38,7 @@
         <dependency org="com.google.gwt" name="gwt-servlet" rev="2.2.0"/>
         <dependency org="com.ibm.icu" name="icu4j" rev="4.6"/>
         <dependency org="junit" name="junit" rev="4.13.2" conf="test->default"/>
-        <dependency org="org.jacoco" name="org.jacoco.ant" rev="0.8.15" />
+        <dependency org="org.jacoco" name="org.jacoco.ant" rev="0.8.15" conf="test->default" />
         <dependency org="com.google.code.findbugs" name="findbugs" rev="2.0.0" conf="build->default"/>
         <dependency org="com.google.code.findbugs" name="findbugs-ant" rev="2.0.0" conf="build->default"/>
     </dependencies>

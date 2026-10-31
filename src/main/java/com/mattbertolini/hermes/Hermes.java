@@ -30,7 +30,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -46,11 +45,15 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Hermes {
+public final class Hermes {
     private static final char DOT = '.';
     private static final String PROPERTIES_EXT = ".properties";
 
-    private static final Map<LocaleMapKey, Object> cache = new ConcurrentHashMap<>();
+    private static final Map<LocaleMapKey, Object> CACHE = new ConcurrentHashMap<>();
+
+    private Hermes() {
+        throw new UnsupportedOperationException("Hermes is a utility class and cannot be instantiated");
+    }
 
     /**
      * For a given interface and locale ,retrieves the GWT i18n interface as a
@@ -79,10 +82,10 @@ public class Hermes {
             locale = ULocale.createCanonical(localeStr);
         }
         LocaleMapKey key = new LocaleMapKey(clazz.getName(), locale);
-        T proxy = (T) cache.get(key);
+        T proxy = (T) CACHE.get(key);
         if (proxy == null) {
             proxy = createProxy(clazz, type, locale);
-            cache.put(key, proxy);
+            CACHE.put(key, proxy);
         }
         return proxy;
     }
@@ -115,43 +118,39 @@ public class Hermes {
         // changed from the locale given by the user if a locale fallback is
         // required.
         ULocale realLocale = locale;
-        try {
-            // Build list of locales from least to most specific, including default null locale
-            List<ULocale> localeChain = new ArrayList<>();
-            localeChain.add(realLocale);
-            ULocale parentLocale = locale;
-            while (parentLocale != null) {
-                parentLocale = parentLocale.getFallback();
-                localeChain.add(0, parentLocale);
-            }
+        // Build list of locales from least to most specific, including default null locale
+        List<ULocale> localeChain = new ArrayList<>();
+        localeChain.add(realLocale);
+        ULocale parentLocale = locale;
+        while (parentLocale != null) {
+            parentLocale = parentLocale.getFallback();
+            localeChain.add(0, parentLocale);
+        }
 
-            // Build properties with more specific locale overriding less specific locale
-            boolean propertiesFileFound = false;
-            for (ULocale currentLocale : localeChain) {
-                try (InputStream is = getPropertiesFile(clazz, currentLocale)) {
-                    if (is != null) {
-                        try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-                            properties.load(reader);
-                            realLocale = currentLocale;
-                            propertiesFileFound = true;
-                        }
+        // Build properties with more specific locale overriding less specific locale
+        boolean propertiesFileFound = false;
+        for (ULocale currentLocale : localeChain) {
+            try (InputStream is = getPropertiesFile(clazz, currentLocale)) {
+                if (is != null) {
+                    try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                        properties.load(reader);
+                        realLocale = currentLocale;
+                        propertiesFileFound = true;
                     }
                 }
             }
-            if (realLocale == null) {
-                realLocale = ULocale.getDefault();
-            }
-            if (!propertiesFileFound) {
-                checkPropertyFileNeeded(clazz);
-            }
-            return new PropertiesLocalePair(properties, realLocale);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 encoding not found.", e);
         }
+        if (realLocale == null) {
+            realLocale = ULocale.getDefault();
+        }
+        if (!propertiesFileFound) {
+            checkPropertyFileNeeded(clazz);
+        }
+        return new PropertiesLocalePair(properties, realLocale);
     }
 
     // If a property file has not been provided, check all properties have valid annotations
-    private static <T> void checkPropertyFileNeeded(Class<T> clazz) throws FileNotFoundException {
+    private static void checkPropertyFileNeeded(Class<?> clazz) throws FileNotFoundException {
         boolean allMethodsHaveDefaults = I18nType.of(clazz)
                 .map(type -> type.hasDefaultsForAllMethods(clazz))
                 .orElse(false);
@@ -218,7 +217,7 @@ public class Hermes {
     }
 
     @FunctionalInterface
-    interface ProxyFactory {
+    private interface ProxyFactory {
         AbstractI18nProxy create(Class<?> clazz, ULocale locale, Properties props);
     }
 
