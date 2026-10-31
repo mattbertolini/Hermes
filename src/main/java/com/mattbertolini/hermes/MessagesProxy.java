@@ -286,22 +286,22 @@ public class MessagesProxy extends AbstractI18nProxy {
      * @return An instantiated PluralRule class
      */
     private PluralRule instantiateCustomPluralRuleClass(Class<? extends PluralRule> clazz) {
-        PluralRule retVal;
+        Class<? extends PluralRule> ruleClass = localizedPluralRuleClass(clazz);
         try {
-            String pluralClassName = clazz.getName() + "_" + this.getLocale().getLanguage();
-            try {
-                Class<?> pClass = Class.forName(pluralClassName);
-                retVal = (PluralRule) pClass.newInstance();
-            } catch (ClassNotFoundException e) {
-                retVal = clazz.newInstance();
-            }
-        } catch (InstantiationException e) {
-            throw new RuntimeException("Could not instantiate custom PluralRule class. " 
-                    + "Make sure the class is not an abstract class or interface and has a default constructor.", e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Could not instantiate custom Plural Rule class.", e);
+            return ruleClass.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Could not instantiate custom PluralRule class " + ruleClass.getName() + ". "
+                    + "Make sure the class is not an abstract class or interface and has a public default constructor.", e);
         }
-        return retVal;
+    }
+
+    private Class<? extends PluralRule> localizedPluralRuleClass(Class<? extends PluralRule> clazz) {
+        String localizedClassName = clazz.getName() + "_" + this.getLocale().getLanguage();
+        try {
+            return Class.forName(localizedClassName, true, clazz.getClassLoader()).asSubclass(PluralRule.class);
+        } catch (ClassNotFoundException e) {
+            return clazz;
+        }
     }
     
     private String buildPatternName(String baseName, List<String> pluralNames) {
