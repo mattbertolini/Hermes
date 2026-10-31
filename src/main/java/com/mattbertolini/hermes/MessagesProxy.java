@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.google.gwt.i18n.client.Messages.AlternateMessage;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
 import com.google.gwt.i18n.client.Messages.PluralCount;
@@ -41,137 +31,169 @@ import com.ibm.icu.text.MessageFormat;
 import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
+
 /**
  * 
  * @author Matt Bertolini
  */
 public class MessagesProxy extends AbstractI18nProxy {
+    private static final Set<Class<?>> PLURAL_COUNT_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
+            int.class, Integer.class, short.class, Short.class));
+    private static final Set<Class<?>> SELECT_NUMBER_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
+            int.class, long.class, float.class, short.class, double.class));
     private static final char OPEN_BRACKET = '[';
     private static final char CLOSE_BRACKET = ']';
     private static final char SEPARATOR = '|';
     
-    private PluralRules pluralRules;
+    private final PluralRules pluralRules;
     
     public MessagesProxy(Class<?> clazz, ULocale locale, Properties properties) {
         super(clazz, locale, properties);
-        this.pluralRules = PluralRules.forLocale(this.getLocale());
-    }
-    
-    @Override
-    public Object parse(Method method, Object[] args) {
-        return this.parseMessage(method, args);
+        pluralRules = PluralRules.forLocale(this.getLocale());
     }
 
-    private Object parseMessage(Method method, Object[] args) {
-        String messageName;
-        Key keyAnnotation = method.getAnnotation(Key.class);
-        if(keyAnnotation == null) {
-            messageName = method.getName();
-        } else {
-            messageName = keyAnnotation.value();
+    @Override
+    protected MethodHandler createHandler(Method method) {
+        return new MessageHandler(method);
+    }
+
+    @FunctionalInterface
+    private interface AlternativeFormSelector {
+        String select(Object[] args);
+    }
+
+    private final class MessageHandler implements MethodHandler {
+        private final String key;
+        private final Class<?>[] parameterTypes;
+        private final List<AlternativeFormSelector> selectors;
+        private final Map<String, String> alternateMessages;
+        private final String defaultMessage;
+        private final boolean safeHtml;
+
+        public MessageHandler(Method method) {
+            key = keyFor(method);
+            parameterTypes = method.getParameterTypes();
+            selectors = buildSelectors(method);
+            alternateMessages = buildAlternateMessages(key, method);
+            defaultMessage = Optional.ofNullable(method.getAnnotation(DefaultMessage.class))
+                    .map(DefaultMessage::value)
+                    .orElse(null);
+            safeHtml = method.getReturnType() == SafeHtml.class;
         }
-        
-        List<String> formsNames = new LinkedList<String>();
+
+        @Override
+        public Object handle(Object[] args) {
+            List<String> forms = selectors.stream()
+                    .map(alternativeFormSelector -> alternativeFormSelector.select(args))
+                    .collect(toList());
+            String patternName = buildPatternName(key, forms);
+            MessageFormat formatter = new MessageFormat(findPattern(patternName), getLocale());
+            return safeHtml ? formatSafeHtml(formatter, args, parameterTypes) : formatPlain(formatter, args);
+        }
+
+        private String findPattern(String patternName) {
+            return Stream.<Supplier<String>>of(
+                            () -> getProperties().getProperty(patternName),
+                            () -> alternateMessages.get(patternName),
+                            () -> getProperties().getProperty(key),
+                            () -> defaultMessage)
+                    .map(Supplier::get)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("No message found for key " + key));
+        }
+    }
+
+    private List<AlternativeFormSelector> buildSelectors(Method method) {
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         Class<?>[] parameterTypes = method.getParameterTypes();
-        for(int i = 0; i < parameterTypes.length; i++) {
-            Annotation[] annotations = parameterAnnotations[i];
-            Class<?> type = parameterTypes[i];
-            for(Annotation annotation : annotations) {
-                if(PluralCount.class.isAssignableFrom(annotation.annotationType()) 
-                        && (int.class.isAssignableFrom(type) 
-                                || Integer.class.isAssignableFrom(type)
-                                || short.class.isAssignableFrom(type)
-                                || Short.class.isAssignableFrom(type))) {
-                    Number num = (Number) args[i];
-                    Plural plural;
-                    // Check for a custom plural rule.
-                    PluralCount pc = (PluralCount) annotation;
-                    Class<? extends PluralRule> pluralRuleClass = pc.value();
-                    if(!pluralRuleClass.isInterface() && PluralRule.class.isAssignableFrom(pluralRuleClass)) {
-                        PluralRule customRule = this.instantiateCustomPluralRuleClass(pluralRuleClass);
-                        plural = CustomPlural.fromNumber(customRule, num.intValue());
-                    } else {
-                        plural = GwtPlural.fromNumber(this.pluralRules, num.doubleValue());
-                    }
-                    formsNames.add(plural.getGwtValue());
-                } else if(Select.class.isAssignableFrom(annotation.annotationType())) {
-                    if(Enum.class.isAssignableFrom(type)) {
-                        Enum<?> enumConstant = (Enum<?>) args[i];
-                        String name;
-                        if(enumConstant == null) {
-                            name = "other";
-                        } else {
-                            name = enumConstant.name();
-                        }
-                        formsNames.add(name);
-                    } else if(String.class.isAssignableFrom(type)) {
-                        String str = (String) args[i];
-                        if(str == null) {
-                            str = "other";
-                        }
-                        formsNames.add(str);
-                    } else if(type.isPrimitive() 
-                            && (int.class.isAssignableFrom(type) 
-                                    || long.class.isAssignableFrom(type)
-                                    || float.class.isAssignableFrom(type) 
-                                    || short.class.isAssignableFrom(type)
-                                    || double.class.isAssignableFrom(type))) {
-                        Number num = (Number) args[i];
-                        formsNames.add(num.toString());
-                    }
+        List<AlternativeFormSelector> selectors = new ArrayList<>();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            for (Annotation annotation : parameterAnnotations[i]) {
+                AlternativeFormSelector selector = selectorFor(annotation, parameterTypes[i], i);
+                if (selector != null) {
+                    selectors.add(selector);
                 }
             }
         }
-        
-        String patternName = this.buildPatternName(messageName, formsNames);
-        String pattern = this.getProperties().getProperty(patternName);
-        if(pattern == null) {
-            Map<String, String> altMsgMap = this.buildAlternateMessageMap(messageName, method);
-            pattern = altMsgMap.get(patternName);
-            if(pattern == null) {
-                pattern = this.getProperties().getProperty(messageName);
-                if(pattern == null) {
-                    DefaultMessage defaultMessage = method.getAnnotation(DefaultMessage.class);
-                    if(defaultMessage != null) {
-                        pattern = defaultMessage.value();
-                    } else {
-                        throw new RuntimeException("No message found for key " + messageName);
-                    }
+        return selectors;
+    }
+
+    private AlternativeFormSelector selectorFor(Annotation annotation, Class<?> type, int index) {
+        if (annotation instanceof PluralCount && isPluralCountType(type)) {
+            Class<? extends PluralRule> ruleClass = ((PluralCount) annotation).value();
+            if (ruleClass.isInterface()) {
+                return args -> GwtPlural.fromNumber(pluralRules, ((Number) args[index]).doubleValue()).getGwtValue();
+            }
+            PluralRule rule = this.instantiateCustomPluralRuleClass(ruleClass);   // once, not per call
+            return args -> CustomPlural.fromNumber(rule, ((Number) args[index]).intValue()).getGwtValue();
+        }
+        if (annotation instanceof Select) {
+            if (Enum.class.isAssignableFrom(type)) {
+                return args -> args[index] == null ? "other" : ((Enum<?>) args[index]).name();
+            }
+            if (String.class == type) {
+                return args -> args[index] == null ? "other" : (String) args[index];
+            }
+            if (isSelectNumberType(type)) {
+                return args -> args[index].toString();
+            }
+        }
+        return null;
+    }
+
+    private static boolean isPluralCountType(Class<?> type) {
+        return PLURAL_COUNT_TYPES.contains(type);
+    }
+
+    private static boolean isSelectNumberType(Class<?> type) {
+        return SELECT_NUMBER_TYPES.contains(type);
+    }
+
+    private static String formatPlain(MessageFormat formatter, Object[] args) {
+        return formatter.format(args, new StringBuffer(), null).toString();
+    }
+
+    private static SafeHtml formatSafeHtml(MessageFormat formatter, Object[] args, Class<?>[] parameterTypes) {
+        Object[] safeArgs = null;
+        if(args != null) {
+            safeArgs = new Object[args.length];
+            for(int i = 0; i < args.length; i++) {
+                Object arg = args[i];
+                Class<?> argType = parameterTypes[i];
+                if(SafeHtml.class.isAssignableFrom(argType)) {
+                    SafeHtml sh = (SafeHtml) arg;
+                    safeArgs[i] = sh.asString();
+                } else if(Number.class.isAssignableFrom(argType)
+                        || Date.class.isAssignableFrom(argType)) {
+                    // Because of the subformat pattern of dates and
+                    // numbers, we cannot escape them.
+                    safeArgs[i] = arg;
+                } else {
+                    safeArgs[i] = SafeHtmlUtils.htmlEscape(arg.toString());
                 }
             }
         }
-         
-        MessageFormat formatter = new MessageFormat(pattern, this.getLocale());
-        Object retVal;
-        if(method.getReturnType().equals(SafeHtml.class)) {
-            Object[] safeArgs = null;
-            if(args != null) {
-                safeArgs = new Object[args.length];
-                for(int i = 0; i < args.length; i++) {
-                    Object arg = args[i];
-                    Class<?> argType = parameterTypes[i];
-                    if(SafeHtml.class.isAssignableFrom(argType)) {
-                        SafeHtml sh = (SafeHtml) arg;
-                        safeArgs[i] = sh.asString();
-                    } else if(Number.class.isAssignableFrom(argType) 
-                            || Date.class.isAssignableFrom(argType)) {
-                        // Because of the subformat pattern of dates and 
-                        // numbers, we cannot escape them.
-                        safeArgs[i] = arg;
-                    } else {
-                        safeArgs[i] = SafeHtmlUtils.htmlEscape(arg.toString());
-                    }
-                }
-            }
-            String formattedString = formatter.format(safeArgs, new StringBuffer(), null).toString();
-            // Would rather use fromSafeConstant() but doesn't work on server.
-            retVal = SafeHtmlUtils.fromTrustedString(formattedString);
-        } else {
-            retVal = formatter.format(args, new StringBuffer(), null).toString();
-        }
-        
-        return retVal;
+        String formattedString = formatter.format(safeArgs, new StringBuffer(), null).toString();
+        // Would rather use fromSafeConstant() but doesn't work on server.
+        return SafeHtmlUtils.fromTrustedString(formattedString);
     }
     
     /**
@@ -225,13 +247,13 @@ public class MessagesProxy extends AbstractI18nProxy {
         if(defaultMessage) {
             retVal = baseName;
         } else {
-            retVal = baseName + pluralStr.toString();
+            retVal = baseName + pluralStr;
         }
         return retVal;
     }
     
-    private Map<String, String> buildAlternateMessageMap(String baseName, Method method) {
-        Map<String, String> retMap = new LinkedHashMap<String, String>();
+    private Map<String, String> buildAlternateMessages(String baseName, Method method) {
+        Map<String, String> retMap = new LinkedHashMap<>();
         AlternateMessage altMsgAnnotation = method.getAnnotation(AlternateMessage.class);
         PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
         String[] values = new String[0];

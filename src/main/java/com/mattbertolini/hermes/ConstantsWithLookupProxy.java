@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,13 @@
 
 package com.mattbertolini.hermes;
 
+import com.google.gwt.i18n.client.ConstantsWithLookup;
+import com.ibm.icu.util.ULocale;
+
 import java.lang.reflect.Method;
 import java.util.MissingResourceException;
 import java.util.Properties;
 
-import com.ibm.icu.util.ULocale;
-
-/**
- * 
- * @author Matt Bertolini
- */
 public class ConstantsWithLookupProxy extends ConstantsProxy {
 
     public ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, Properties properties) {
@@ -36,24 +33,26 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
     }
 
     @Override
-    public Object parse(Method method, Object[] args) {
-        Object retVal;
-        if(this.getI18nClass().equals(method.getDeclaringClass()) && (args == null || args.length == 0)) {
-            retVal = this.parseConstant(method);
-        } else {
-            String name = (String) args[0];
-            try {
-                if(name == null || name.isEmpty()) {
-                    throw new MissingResourceException("Null or empty method name given.", this.getI18nClass().getName(), name);
-                }
-                Method m = this.getI18nClass().getMethod(name);
-                retVal = this.parseConstant(m);
-            } catch (SecurityException e) {
-                throw new RuntimeException(e);
-            } catch (NoSuchMethodException e) {
-                throw new MissingResourceException("No property with given name found.", this.getI18nClass().getName(), name);
-            }
+    protected MethodHandler createHandler(Method method) {
+        if (method.getDeclaringClass() == ConstantsWithLookup.class) {
+            return this::lookup;
         }
-        return retVal;
+        return super.createHandler(method);
+    }
+
+    private Object lookup(Object[] args) {
+        String name = (String) args[0];
+        if (name == null || name.isEmpty()) {
+            throw new MissingResourceException("Null or empty method name given.", getI18nClass().getName(), name);
+        }
+        return handlerFor(findConstantMethod(name)).handle(null);
+    }
+
+    private Method findConstantMethod(String name) {
+        try {
+            return getI18nClass().getMethod(name);
+        } catch (NoSuchMethodException e) {
+            throw new MissingResourceException("No property with given name found.", getI18nClass().getName(), name);
+        }
     }
 }

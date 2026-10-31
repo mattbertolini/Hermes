@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,11 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-
 import com.google.gwt.i18n.client.Constants.DefaultBooleanValue;
 import com.google.gwt.i18n.client.Constants.DefaultDoubleValue;
 import com.google.gwt.i18n.client.Constants.DefaultFloatValue;
@@ -31,13 +26,13 @@ import com.google.gwt.i18n.client.Constants.DefaultIntValue;
 import com.google.gwt.i18n.client.Constants.DefaultStringArrayValue;
 import com.google.gwt.i18n.client.Constants.DefaultStringMapValue;
 import com.google.gwt.i18n.client.Constants.DefaultStringValue;
-import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.ibm.icu.util.ULocale;
 
-/**
- * 
- * @author Matt Bertolini
- */
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
 public class ConstantsProxy extends AbstractI18nProxy {
 
     public ConstantsProxy(Class<?> clazz, ULocale locale, Properties properties) {
@@ -45,31 +40,27 @@ public class ConstantsProxy extends AbstractI18nProxy {
     }
 
     @Override
-    public Object parse(Method method, Object[] args) {
-        return this.parseConstant(method);
+    protected MethodHandler createHandler(Method method) {
+        Object value = resolveConstant(method);
+        return args -> copyIfMutable(value);
     }
-    
-    protected Object parseConstant(Method method) {
-        String constantName;
-        Key keyAnnotation = method.getAnnotation(Key.class);
-        if(keyAnnotation == null) {
-            constantName = method.getName();
-        } else {
-            constantName = keyAnnotation.value();
+
+    protected Object resolveConstant(Method method) {
+        String constantValue = getProperties().getProperty(keyFor(method));
+        return constantValue == null ? getDefaultValue(method) : getValue(constantValue, method);
+    }
+
+    private static Object copyIfMutable(Object value) {
+        if (value instanceof String[]) {
+            return ((String[]) value).clone();
         }
-        
-        Object retVal;
-        String constantValue = this.getProperties().getProperty(constantName);
-        if(constantValue == null) {
-            retVal = this.getDefaultValue(method);
-        } else {
-            retVal = this.getValue(constantValue, method);
+        if (value instanceof Map) {
+            return new HashMap<>((Map<?, ?>) value);
         }
-        return retVal;
+        return value;
     }
     
     private Object getValue(String constantValue, Method method) {
-        //
         Object retVal;
         Class<?> returnType = method.getReturnType();
         if(int.class.equals(returnType)) {
@@ -83,11 +74,9 @@ public class ConstantsProxy extends AbstractI18nProxy {
         } else if(returnType.isArray() && String.class.equals(returnType.getComponentType())) {
             retVal = constantValue.split(", *");
         } else if(Map.class.equals(returnType)) {
-            //
             String[] keys = constantValue.split(",");
-            Map<String, String> strMap = new HashMap<String, String>(keys.length);
+            Map<String, String> strMap = new HashMap<>(keys.length);
             for(String key : keys) {
-                //
                 key = key.trim();
                 String keyVal = this.getProperties().getProperty(key);
                 strMap.put(key, keyVal);
@@ -120,9 +109,8 @@ public class ConstantsProxy extends AbstractI18nProxy {
         } else if(Map.class.equals(returnType)) {
             DefaultStringMapValue defaultValue = method.getAnnotation(DefaultStringMapValue.class);
             String[] keysValues = defaultValue.value();
-            Map<String, String> strMap = new HashMap<String, String>();
+            Map<String, String> strMap = new HashMap<>();
             for(int i = 0; i < keysValues.length; i += 2) {
-                //
                 strMap.put(keysValues[i], keysValues[i + 1]);
             }
             retVal = strMap;
