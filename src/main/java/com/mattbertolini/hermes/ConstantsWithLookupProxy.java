@@ -35,15 +35,20 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
     @Override
     protected MethodHandler createHandler(Method method) {
         if (method.getDeclaringClass() == ConstantsWithLookup.class) {
-            return this::lookup;
+            return args -> lookup(method, args);
         }
         return super.createHandler(method);
     }
 
-    private Object lookup(Object[] args) {
+    private Object lookup(Method lookupMethod, Object[] args) {
         String name = (String) args[0];
         if (name == null || name.isEmpty()) {
             throw new MissingResourceException("Null or empty method name given.", getI18nClass().getName(), name);
+        }
+        Method constantMethod = findConstantMethod(name);
+        if (constantMethod.getReturnType() != lookupMethod.getReturnType()) {
+            throw new MissingResourceException("Property " + name + " is not of type "
+                    + lookupMethod.getReturnType().getSimpleName() + ".", getI18nClass().getName(), name);
         }
         return handlerFor(findConstantMethod(name)).handle(null);
     }

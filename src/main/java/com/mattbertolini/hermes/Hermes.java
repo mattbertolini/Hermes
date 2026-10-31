@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -77,17 +78,24 @@ public final class Hermes {
         I18nType type = I18nType.of(clazz).orElseThrow(() -> new IllegalArgumentException(
                 "Class " + clazz.getName() + " does not implement required interfaces."));
 
-        ULocale locale = null;
+        ULocale locale;
         if (localeStr != null && !localeStr.isEmpty()) {
             locale = ULocale.createCanonical(localeStr);
+        } else {
+            locale = null;
         }
         LocaleMapKey key = new LocaleMapKey(clazz.getName(), locale);
-        T proxy = (T) CACHE.get(key);
-        if (proxy == null) {
-            proxy = createProxy(clazz, type, locale);
-            CACHE.put(key, proxy);
+        try {
+            return (T) CACHE.computeIfAbsent(key, k -> {
+                try {
+                    return createProxy(clazz, type, locale);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
         }
-        return proxy;
     }
 
     @SuppressWarnings("unchecked")

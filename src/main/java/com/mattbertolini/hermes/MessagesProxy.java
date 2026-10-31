@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.MissingResourceException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
@@ -55,6 +56,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class MessagesProxy extends AbstractI18nProxy {
@@ -63,9 +65,9 @@ public class MessagesProxy extends AbstractI18nProxy {
     // GWT allows integral primitives and boolean. float and double are a Hermes extension.
     private static final Set<Class<?>> SELECT_PRIMITIVE_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
             int.class, long.class, short.class, byte.class, boolean.class, float.class, double.class));
-    private static final char OPEN_BRACKET = '[';
-    private static final char CLOSE_BRACKET = ']';
-    private static final char SEPARATOR = '|';
+    private static final String OPEN_BRACKET = "[";
+    private static final String CLOSE_BRACKET = "]";
+    private static final String SEPARATOR = "|";
     
     private final PluralRules pluralRules;
     
@@ -139,7 +141,7 @@ public class MessagesProxy extends AbstractI18nProxy {
                     .map(Supplier::get)
                     .filter(Objects::nonNull)
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No message found for key " + key));
+                    .orElseThrow(() -> new MissingResourceException("No message found for key " + key, getI18nClass().getName(), key));
         }
 
         private Object[] adjust(Object[] args) {
@@ -305,49 +307,22 @@ public class MessagesProxy extends AbstractI18nProxy {
     }
     
     private String buildPatternName(String baseName, List<String> pluralNames) {
-        String retVal;
-        StringBuilder pluralStr = new StringBuilder();
-        boolean defaultMessage = true;
-        if(pluralNames != null && !pluralNames.isEmpty()) {
-            pluralStr.append(OPEN_BRACKET);
-            boolean first = true;
-            for(String name : pluralNames) {
-                if(!name.equals(GwtPlural.OTHER.getGwtValue())) {
-                    defaultMessage = false;
-                }
-                if(first) {
-                    first = false;
-                } else {
-                    pluralStr.append(SEPARATOR);
-                }
-                pluralStr.append(name);
-            }
-            pluralStr.append(CLOSE_BRACKET);
-        }
-        if(defaultMessage) {
-            retVal = baseName;
-        } else {
-            retVal = baseName + pluralStr;
-        }
-        return retVal;
+        boolean allOther = pluralNames.stream().allMatch(GwtPlural.OTHER.getGwtValue()::equals);
+        return allOther ? baseName : pluralNames.stream().collect(joining(SEPARATOR, baseName + OPEN_BRACKET, CLOSE_BRACKET));
     }
-    
+
     @SuppressWarnings("deprecation")
     private Map<String, String> buildAlternateMessages(String baseName, Method method) {
-        Map<String, String> retMap = new LinkedHashMap<>();
-        AlternateMessage altMsgAnnotation = method.getAnnotation(AlternateMessage.class);
-        PluralText pluralTextAnnotation = method.getAnnotation(PluralText.class);
-        String[] values = new String[0];
-        if(altMsgAnnotation != null) {
-            values = altMsgAnnotation.value();
-        } else if(pluralTextAnnotation != null) {
-            // Fall back on the PluralText if no AlternateMessage found.
-            values = pluralTextAnnotation.value();
+        String[] values = Optional.ofNullable(method.getAnnotation(AlternateMessage.class))
+                .map(AlternateMessage::value)
+                .orElseGet(() -> Optional.ofNullable(method.getAnnotation(PluralText.class))
+                        .map(PluralText::value)
+                        .orElse(new String[0]));
+        Map<String, String> alternateMessages = new LinkedHashMap<>();
+        for (int i = 0; i < values.length; i += 2) {
+            alternateMessages.put(baseName + OPEN_BRACKET + values[i] + CLOSE_BRACKET, values[i + 1]);
         }
-        for(int i = 0; i < values.length; i += 2) {
-            retMap.put(baseName + OPEN_BRACKET + values[i] + CLOSE_BRACKET, values[i + 1]);
-        }
-        return retMap;
+        return alternateMessages;
     }
 
     private enum SelectKind {
