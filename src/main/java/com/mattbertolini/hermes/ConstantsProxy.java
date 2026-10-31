@@ -28,10 +28,15 @@ import com.google.gwt.i18n.client.Constants.DefaultStringMapValue;
 import com.google.gwt.i18n.client.Constants.DefaultStringValue;
 import com.ibm.icu.util.ULocale;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Predicate;
 
 public class ConstantsProxy extends AbstractI18nProxy {
 
@@ -41,83 +46,135 @@ public class ConstantsProxy extends AbstractI18nProxy {
 
     @Override
     protected MethodHandler createHandler(Method method) {
-        Object value = resolveConstant(method);
-        return args -> copyIfMutable(value);
+        ConstantType constantType = ConstantType.forReturnType(method.getReturnType());
+        Object value = Optional.ofNullable(getProperties().getProperty(keyFor(method)))
+                .map(constantValue -> constantType.parse(constantValue, getProperties()))
+                .orElseGet(() -> constantType.defaultValue(method));
+        return args -> constantType.copy(value);
     }
 
-    protected Object resolveConstant(Method method) {
-        String constantValue = getProperties().getProperty(keyFor(method));
-        return constantValue == null ? getDefaultValue(method) : getValue(constantValue, method);
-    }
+    private enum ConstantType {
+        INT(int.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultIntValue.class).value();
+            }
 
-    private static Object copyIfMutable(Object value) {
-        if (value instanceof String[]) {
-            return ((String[]) value).clone();
-        }
-        if (value instanceof Map) {
-            return new HashMap<>((Map<?, ?>) value);
-        }
-        return value;
-    }
-    
-    private Object getValue(String constantValue, Method method) {
-        Object retVal;
-        Class<?> returnType = method.getReturnType();
-        if(int.class.equals(returnType)) {
-            retVal = Integer.valueOf(constantValue);
-        } else if(float.class.equals(returnType)) {
-            retVal = Float.valueOf(constantValue);
-        } else if(double.class.equals(returnType)) {
-            retVal = Double.valueOf(constantValue);
-        } else if(boolean.class.equals(returnType)) {
-            retVal = Boolean.valueOf(constantValue);
-        } else if(returnType.isArray() && String.class.equals(returnType.getComponentType())) {
-            retVal = constantValue.split(", *");
-        } else if(Map.class.equals(returnType)) {
-            String[] keys = constantValue.split(",");
-            Map<String, String> strMap = new HashMap<>(keys.length);
-            for(String key : keys) {
-                key = key.trim();
-                String keyVal = this.getProperties().getProperty(key);
-                strMap.put(key, keyVal);
+            @Override
+            Object parse(String value, Properties properties) {
+                return Integer.valueOf(value);
             }
-            retVal = strMap;
-        } else {
-            retVal = constantValue;
-        }
-        return retVal;
-    }
-    
-    private Object getDefaultValue(Method method) {
-        Object retVal;
-        Class<?> returnType = method.getReturnType();
-        if(int.class.equals(returnType)) {
-            DefaultIntValue defaultValue = method.getAnnotation(DefaultIntValue.class);
-            retVal = defaultValue.value();
-        } else if(float.class.equals(returnType)) {
-            DefaultFloatValue defaultValue = method.getAnnotation(DefaultFloatValue.class);
-            retVal = defaultValue.value();
-        } else if(double.class.equals(returnType)) {
-            DefaultDoubleValue defaultValue = method.getAnnotation(DefaultDoubleValue.class);
-            retVal = defaultValue.value();
-        } else if(boolean.class.equals(returnType)) {
-            DefaultBooleanValue defaultValue = method.getAnnotation(DefaultBooleanValue.class);
-            retVal = defaultValue.value();
-        } else if(returnType.isArray() && String.class.equals(returnType.getComponentType())) {
-            DefaultStringArrayValue defaultValue = method.getAnnotation(DefaultStringArrayValue.class);
-            retVal = defaultValue.value();
-        } else if(Map.class.equals(returnType)) {
-            DefaultStringMapValue defaultValue = method.getAnnotation(DefaultStringMapValue.class);
-            String[] keysValues = defaultValue.value();
-            Map<String, String> strMap = new HashMap<>();
-            for(int i = 0; i < keysValues.length; i += 2) {
-                strMap.put(keysValues[i], keysValues[i + 1]);
+        },
+        FLOAT(float.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultFloatValue.class).value();
             }
-            retVal = strMap;
-        } else {
-            DefaultStringValue defaultValue = method.getAnnotation(DefaultStringValue.class);
-            retVal = defaultValue.value();
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return Float.valueOf(value);
+            }
+        },
+        DOUBLE(double.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultDoubleValue.class).value();
+            }
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return Double.valueOf(value);
+            }
+        },
+        BOOLEAN(boolean.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultBooleanValue.class).value();
+            }
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return Boolean.valueOf(value);
+            }
+        },
+        STRING_ARRAY(type -> type.isArray() && type.getComponentType() == String.class) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultStringArrayValue.class).value();
+            }
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return value.split(", *");
+            }
+
+            @Override
+            Object copy(Object value) {
+                return ((String[]) value).clone();
+            }
+        },
+        STRING_MAP(Map.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                String[] keysValues = annotation(method, DefaultStringMapValue.class).value();
+                Map<String, String> map = new HashMap<>();
+                for (int i = 0; i < keysValues.length; i += 2) {
+                    map.put(keysValues[i], keysValues[i + 1]);
+                }
+                return map;
+            }
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return Arrays.stream(value.split(","))
+                        .map(String::trim)
+                        .collect(HashMap::new, (map, key) -> map.put(key, properties.getProperty(key)), HashMap::putAll);
+            }
+
+            @Override
+            Object copy(Object value) {
+                return new HashMap<>((Map<?, ?>) value);
+            }
+        },
+        STRING(String.class::equals) {
+            @Override
+            Object defaultValue(Method method) {
+                return annotation(method, DefaultStringValue.class).value();
+            }
+
+            @Override
+            Object parse(String value, Properties properties) {
+                return value;
+            }
+        };
+
+        private final Predicate<Class<?>> matcher;
+
+        ConstantType(Predicate<Class<?>> matcher) {
+            this.matcher = matcher;
         }
-        return retVal;
+
+        abstract Object parse(String value, Properties properties);
+        abstract Object defaultValue(Method method);
+
+        Object copy(Object value) {
+            return value;
+        }
+
+        static ConstantType forReturnType(Class<?> type) {
+            return Arrays.stream(values())
+                    .filter(constantType -> constantType.matcher.test(type))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unsupported Constants return type: " + type));
+        }
+
+        private static <A extends Annotation> A annotation(Method method, Class<A> annotationType) {
+            return Optional.ofNullable(method.getAnnotation(annotationType))
+                    .orElseThrow(() -> new MissingResourceException(
+                            "No property value or @" + annotationType.getSimpleName() + " found for " + method.getName(),
+                            method.getDeclaringClass().getName(),
+                            keyFor(method)));
+        }
     }
 }

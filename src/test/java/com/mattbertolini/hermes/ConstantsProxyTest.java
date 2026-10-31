@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.MissingResourceException;
 import java.util.Set;
 
 public class ConstantsProxyTest {
@@ -183,5 +184,43 @@ public class ConstantsProxyTest {
     public void testMapConstantIsNotShared() {
         this.testData.MapConstant().put("MapKey1", "Changed");
         Assert.assertEquals("Map Value 1", this.testData.MapConstant().get("MapKey1"));
+    }
+
+    @Test
+    public void testMapConstantKeepsMissingKeysAsNull() {
+        Map<String, String> actual = this.testData.MapConstantWithMissingKey();
+        Assert.assertEquals("Map Value 1", actual.get("MapKey1"));
+        Assert.assertTrue(actual.containsKey("NoSuchKey"));
+        Assert.assertNull(actual.get("NoSuchKey"));
+    }
+
+    @Test
+    public void testMapConstantAllowsDuplicateKeys() {
+        Map<String, String> actual = this.testData.MapConstantWithDuplicateKeys();
+        Assert.assertEquals(2, actual.size());
+        Assert.assertEquals("Map Value 1", actual.get("MapKey1"));
+        Assert.assertEquals("Map Value 2", actual.get("MapKey2"));
+    }
+
+    @Test
+    public void testConstantWithNoValueOrDefaultThrowsMissingResource() {
+        MissingResourceException e = Assert.assertThrows(MissingResourceException.class,
+                () -> this.testData.ConstantWithNoValueOrDefault());
+        Assert.assertEquals(ConstantsProxyTestData.class.getName(), e.getClassName());
+        Assert.assertEquals("MissingKeyForConstant", e.getKey());
+    }
+
+    @Test
+    public void testConstantWithNoValueOrDefaultFailsOnEveryCall() {
+        Assert.assertThrows(MissingResourceException.class, () -> this.testData.ConstantWithNoValueOrDefault());
+        Assert.assertThrows(MissingResourceException.class, () -> this.testData.ConstantWithNoValueOrDefault());
+    }
+
+    @Test
+    public void testUnsupportedReturnTypeThrows() {
+        // The property has a value, so this fails on the return type rather than a missing value.
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> this.testData.UnsupportedLongConstant());
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("long"));
     }
 }

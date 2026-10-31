@@ -53,4 +53,15 @@ public interface ConstantsProxyTestData extends Constants {
     Map<String, String> MapConstant();
     @DefaultStringMapValue({"DefaultKey1", "DefaultValue1", "DefaultKey2", "DefaultValue2"})
     Map<String, String> MapConstantDefaultValue();
+
+    // The methods below are intentionally invalid. Handlers are created on
+    // first call, so they only fail in the tests that use them.
+    Map<String, String> MapConstantWithMissingKey();
+
+    Map<String, String> MapConstantWithDuplicateKeys();
+
+    @Key("MissingKeyForConstant")
+    String ConstantWithNoValueOrDefault();
+
+    long UnsupportedLongConstant();
 }
