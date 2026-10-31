@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,6 +46,11 @@ public interface MessagesProxyTestData extends Messages {
     SafeHtml BasicHtmlMessage(String linkText);
     SafeHtml HtmlMessageWithUnsafeArgument(String unsafeText);
     SafeHtml HtmlMessageWithSafeHtmlArgument(SafeHtml safeHtml);
+    SafeHtml HtmlMessageWithNoArguments();
+    SafeHtml HtmlMessageWithIntArgument(int number);
+    SafeHtml HtmlMessageWithCurrencyArgument(BigDecimal money);
+    SafeHtml HtmlMessageWithDateArgument(Date date);
+    SafeHtml HtmlMessageWithObjectArgument(Object value);
     String MessageWithNoKey();
     String MessageWithEnumSelect(@Select SelectEnum arg);
     String MessageWithStringSelect(@Select String arg);

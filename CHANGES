@@ -1,6 +1,14 @@
 Hermes Change Log
 =================
 
+Version 2.0.0 -- TBD
+-------------------------------------------------------------------------------
+
+* Major version upgrade
+* Java 8 minimum required
+* Large refactoring of proxy internals
+*
+
 Version 1.2.0 -- 2011-05-12
 -------------------------------------------------------------------------------
 Features:

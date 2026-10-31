@@ -49,10 +49,6 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
-/**
- * 
- * @author Matt Bertolini
- */
 public class MessagesProxy extends AbstractI18nProxy {
     private static final Set<Class<?>> PLURAL_COUNT_TYPES = new HashSet<>(Arrays.<Class<?>>asList(
             int.class, Integer.class, short.class, Short.class));
@@ -79,23 +75,26 @@ public class MessagesProxy extends AbstractI18nProxy {
         String select(Object[] args);
     }
 
+    @FunctionalInterface
+    private interface MessageRenderer {
+        Object render(MessageFormat formatter, Object[] args);
+    }
+
     private final class MessageHandler implements MethodHandler {
         private final String key;
-        private final Class<?>[] parameterTypes;
         private final List<AlternativeFormSelector> selectors;
         private final Map<String, String> alternateMessages;
         private final String defaultMessage;
-        private final boolean safeHtml;
+        private final MessageRenderer renderer;
 
         public MessageHandler(Method method) {
             key = keyFor(method);
-            parameterTypes = method.getParameterTypes();
             selectors = buildSelectors(method);
             alternateMessages = buildAlternateMessages(key, method);
             defaultMessage = Optional.ofNullable(method.getAnnotation(DefaultMessage.class))
                     .map(DefaultMessage::value)
                     .orElse(null);
-            safeHtml = method.getReturnType() == SafeHtml.class;
+            renderer = method.getReturnType() == SafeHtml.class ? MessagesProxy::formatSafeHtml : MessagesProxy::formatPlain;
         }
 
         @Override
@@ -105,7 +104,7 @@ public class MessagesProxy extends AbstractI18nProxy {
                     .collect(toList());
             String patternName = buildPatternName(key, forms);
             MessageFormat formatter = new MessageFormat(findPattern(patternName), getLocale());
-            return safeHtml ? formatSafeHtml(formatter, args, parameterTypes) : formatPlain(formatter, args);
+            return renderer.render(formatter, args);
         }
 
         private String findPattern(String patternName) {
@@ -171,29 +170,20 @@ public class MessagesProxy extends AbstractI18nProxy {
         return formatter.format(args, new StringBuffer(), null).toString();
     }
 
-    private static SafeHtml formatSafeHtml(MessageFormat formatter, Object[] args, Class<?>[] parameterTypes) {
-        Object[] safeArgs = null;
-        if(args != null) {
-            safeArgs = new Object[args.length];
-            for(int i = 0; i < args.length; i++) {
-                Object arg = args[i];
-                Class<?> argType = parameterTypes[i];
-                if(SafeHtml.class.isAssignableFrom(argType)) {
-                    SafeHtml sh = (SafeHtml) arg;
-                    safeArgs[i] = sh.asString();
-                } else if(Number.class.isAssignableFrom(argType)
-                        || Date.class.isAssignableFrom(argType)) {
-                    // Because of the subformat pattern of dates and
-                    // numbers, we cannot escape them.
-                    safeArgs[i] = arg;
-                } else {
-                    safeArgs[i] = SafeHtmlUtils.htmlEscape(arg.toString());
-                }
-            }
-        }
-        String formattedString = formatter.format(safeArgs, new StringBuffer(), null).toString();
+    private static SafeHtml formatSafeHtml(MessageFormat formatter, Object[] args) {
+        Object[] safeArgs = args == null ? null : Arrays.stream(args).map(MessagesProxy::escape).toArray();
         // Would rather use fromSafeConstant() but doesn't work on server.
-        return SafeHtmlUtils.fromTrustedString(formattedString);
+        return SafeHtmlUtils.fromTrustedString(formatPlain(formatter, safeArgs));
+    }
+
+    private static Object escape(Object arg) {
+        if (arg instanceof SafeHtml) {
+            return ((SafeHtml) arg).asString();
+        }
+        if (arg instanceof Number || arg instanceof Date) {
+            return arg;   // Sub-format patterns need the real value
+        }
+        return SafeHtmlUtils.htmlEscape(String.valueOf(arg));
     }
     
     /**

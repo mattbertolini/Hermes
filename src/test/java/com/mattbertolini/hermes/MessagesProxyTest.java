@@ -183,7 +183,59 @@ public class MessagesProxyTest {
         SafeHtml actual = this.testData.HtmlMessageWithSafeHtmlArgument(SafeHtmlUtils.fromTrustedString("<p>Hello World</p>"));
         Assert.assertEquals(expected.asString(), actual.asString());
     }
-    
+
+    @Test
+    public void testHtmlMessageWithNoArguments() {
+        SafeHtml actual = this.testData.HtmlMessageWithNoArguments();
+        Assert.assertEquals("<p>No arguments here.</p>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithPrimitiveNumberArgument() {
+        // Primitive arguments arrive boxed, so they must still reach the number sub-format unescaped.
+        SafeHtml actual = this.testData.HtmlMessageWithIntArgument(12345);
+        Assert.assertEquals("<b>12,345</b>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithCurrencyArgument() {
+        SafeHtml actual = this.testData.HtmlMessageWithCurrencyArgument(BigDecimal.valueOf(9876.54d));
+        Assert.assertEquals("<b>$9,876.54</b>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithDateArgument() {
+        Calendar cal = Calendar.getInstance(TEST_TIME_ZONE);
+        cal.set(2011, Calendar.MARCH, 26, 21, 25, 0);
+        SafeHtml actual = this.testData.HtmlMessageWithDateArgument(cal.getTime());
+        Assert.assertEquals("<b>2011-03-26</b>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithObjectArgumentHoldingNumber() {
+        // Escaping is decided by the runtime value, not the declared parameter type.
+        SafeHtml actual = this.testData.HtmlMessageWithObjectArgument(12345);
+        Assert.assertEquals("<b>12,345</b>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithObjectArgumentHoldingUnsafeString() {
+        SafeHtml actual = this.testData.HtmlMessageWithObjectArgument("<script>");
+        Assert.assertEquals("<b>&lt;script&gt;</b>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithNullStringArgument() {
+        SafeHtml actual = this.testData.HtmlMessageWithUnsafeArgument(null);
+        Assert.assertEquals("<a href=\"http://www.google.com/\">null</a>", actual.asString());
+    }
+
+    @Test
+    public void testHtmlMessageWithNullSafeHtmlArgument() {
+        SafeHtml actual = this.testData.HtmlMessageWithSafeHtmlArgument(null);
+        Assert.assertEquals("<div id=\"test\">null</div>", actual.asString());
+    }
+
     @Test(expected = RuntimeException.class)
     public void testNoKeyFound() {
         this.testData.MessageWithNoKey();
