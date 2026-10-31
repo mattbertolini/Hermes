@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2012  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,13 @@
 
 package com.mattbertolini.hermes;
 
+import com.google.gwt.i18n.client.Constants;
+import com.google.gwt.i18n.client.ConstantsWithLookup;
+import com.google.gwt.i18n.client.Messages;
+import com.google.gwt.i18n.client.Messages.AlternateMessage;
+import com.google.gwt.i18n.client.Messages.DefaultMessage;
+import com.ibm.icu.util.ULocale;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,20 +37,15 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.gwt.i18n.client.Constants;
-import com.google.gwt.i18n.client.ConstantsWithLookup;
-import com.google.gwt.i18n.client.Messages;
-import com.ibm.icu.util.ULocale;
-
-/**
- *
- * @author Matt Bertolini
- */
 public class Hermes {
     private static final char DOT = '.';
     private static final String PROPERTIES_EXT = ".properties";
@@ -69,7 +71,9 @@ public class Hermes {
         if (clazz == null) {
             throw new IllegalArgumentException("Class cannot be null.");
         }
-        checkValidSubclass(clazz);
+        I18nType type = I18nType.of(clazz).orElseThrow(() -> new IllegalArgumentException(
+                "Class " + clazz.getName() + " does not implement required interfaces."));
+
         ULocale locale = null;
         if (localeStr != null && !localeStr.isEmpty()) {
             locale = ULocale.createCanonical(localeStr);
@@ -77,33 +81,26 @@ public class Hermes {
         LocaleMapKey key = new LocaleMapKey(clazz.getName(), locale);
         T proxy = (T) cache.get(key);
         if (proxy == null) {
-            proxy = createProxy(clazz, locale);
+            proxy = createProxy(clazz, type, locale);
             cache.put(key, proxy);
         }
         return proxy;
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T createProxy(Class<T> clazz, ULocale locale) throws IOException {
+    private static <T> T createProxy(Class<T> clazz, I18nType type, ULocale locale) throws IOException {
         PropertiesLocalePair result = getPropertiesForClass(clazz, locale);
         Properties properties = result.getProperties();
         // This is the actual locale the proxy classes will be given. It may be 
         // changed from the locale given by the user if a locale fallback is 
         // required.
         ULocale realLocale = result.getLocale();
-        InvocationHandler handler = null;
-        if (ConstantsWithLookup.class.isAssignableFrom(clazz)) {
-            handler = new ConstantsWithLookupProxy(clazz, realLocale, properties);
-        } else if (Constants.class.isAssignableFrom(clazz)) {
-            handler = new ConstantsProxy(clazz, realLocale, properties);
-        } else if (Messages.class.isAssignableFrom(clazz)) {
-            handler = new MessagesProxy(clazz, realLocale, properties);
-        }
+        InvocationHandler handler = type.create(clazz, realLocale, properties);
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, handler);
     }
 
     private static <T> PropertiesLocalePair getPropertiesForClass(Class<T> clazz, ULocale locale) throws IOException {
-        if (clazz.equals(ConstantsWithLookup.class) || clazz.equals(Constants.class) || clazz.equals(Messages.class)) {
+        if (I18nType.isRootInterface(clazz)) {
             return new PropertiesLocalePair(new Properties(), locale);
         }
         // Get parent properties first - allowing for multiple inheritance
@@ -155,41 +152,12 @@ public class Hermes {
 
     // If a property file has not been provided, check all properties have valid annotations
     private static <T> void checkPropertyFileNeeded(Class<T> clazz) throws FileNotFoundException {
-        boolean isMessagesInterface = Messages.class.isAssignableFrom(clazz);
-        boolean isConstantsInterface = Constants.class.isAssignableFrom(clazz);
-
-        Method[] declaredMethods = clazz.getDeclaredMethods();
-        for (Method method : declaredMethods) {
-            boolean i18nAnnotationFound = false;
-
-            Annotation[] annotations = method.getDeclaredAnnotations();
-            for (Annotation annotation : annotations) {
-                Class<? extends Annotation> type = annotation.annotationType();
-
-                if (isMessagesInterface && (
-                        Messages.DefaultMessage.class.equals(type) ||
-                        Messages.AlternateMessage.class.equals(type))) {
-                    i18nAnnotationFound = true;
-                    break;
-                }
-
-                if (isConstantsInterface && (
-                        Constants.DefaultBooleanValue.class.equals(type) ||
-                        Constants.DefaultIntValue.class.equals(type) ||
-                        Constants.DefaultDoubleValue.class.equals(type) ||
-                        Constants.DefaultFloatValue.class.equals(type) ||
-                        Constants.DefaultStringValue.class.equals(type) ||
-                        Constants.DefaultStringMapValue.class.equals(type) ||
-                        Constants.DefaultStringArrayValue.class.equals(type))) {
-                    i18nAnnotationFound = true;
-                    break;
-                }
-            }
-
-            if (!i18nAnnotationFound) {
-                // No annotation found for the property - we are missing a property file
-                throw new FileNotFoundException("Could not find any properties files matching the class: " + clazz.getName());
-            }
+        boolean allMethodsHaveDefaults = I18nType.of(clazz)
+                .map(type -> type.hasDefaultsForAllMethods(clazz))
+                .orElse(false);
+        if (!allMethodsHaveDefaults) {
+            // No annotation found for a property - we are missing a property file
+            throw new FileNotFoundException("Could not find any properties files matching the class: " + clazz.getName());
         }
     }
 
@@ -227,16 +195,8 @@ public class Hermes {
         return classname;
     }
 
-    private static void checkValidSubclass(Class<?> clazz) {
-        if (!isValidSubclass(clazz)) {
-            throw new IllegalArgumentException("Class " + clazz.getName() + " does not implement required interfaces.");
-        }
-    }
-
     private static boolean isValidSubclass(Class<?> clazz) {
-        return ConstantsWithLookup.class.isAssignableFrom(clazz)
-                || Constants.class.isAssignableFrom(clazz)
-                || Messages.class.isAssignableFrom(clazz);
+        return I18nType.of(clazz).isPresent();
     }
 
     static class PropertiesLocalePair {
@@ -254,6 +214,50 @@ public class Hermes {
 
         public ULocale getLocale() {
             return locale;
+        }
+    }
+
+    @FunctionalInterface
+    interface ProxyFactory {
+        AbstractI18nProxy create(Class<?> clazz, ULocale locale, Properties props);
+    }
+
+    private enum I18nType {
+        // Order matters. Most specific first
+        CONSTANTS_WITH_LOOKUP(ConstantsWithLookup.class, ConstantsWithLookupProxy::new, ConstantsProxy.defaultAnnotations()),
+        CONSTANTS(Constants.class, ConstantsProxy::new, ConstantsProxy.defaultAnnotations()),
+        MESSAGES(Messages.class, MessagesProxy::new, new HashSet<>(Arrays.asList(DefaultMessage.class, AlternateMessage.class)));
+
+        private final Class<?> rootInterface;
+        private final ProxyFactory factory;
+        private final Set<Class<? extends Annotation>> defaultAnnotations;
+
+        I18nType(Class<?> rootInterface, ProxyFactory factory, Set<Class<? extends Annotation>> defaultAnnotations) {
+            this.rootInterface = rootInterface;
+            this.factory = factory;
+            this.defaultAnnotations = defaultAnnotations;
+        }
+
+        AbstractI18nProxy create(Class<?> clazz, ULocale locale, Properties properties) {
+            return factory.create(clazz, locale, properties);
+        }
+
+        boolean hasDefaultsForAllMethods(Class<?> clazz) {
+            return Arrays.stream(clazz.getDeclaredMethods()).allMatch(this::hasDefault);
+        }
+
+        private boolean hasDefault(Method method) {
+            return Arrays.stream(method.getDeclaredAnnotations())
+                    .map(Annotation::annotationType)
+                    .anyMatch(defaultAnnotations::contains);
+        }
+
+        static Optional<I18nType> of(Class<?> clazz) {
+            return Arrays.stream(values()).filter(type -> type.rootInterface.isAssignableFrom(clazz)).findFirst();
+        }
+
+        static boolean isRootInterface(Class<?> clazz) {
+            return Arrays.stream(values()).anyMatch(type -> type.rootInterface == clazz);
         }
     }
 }

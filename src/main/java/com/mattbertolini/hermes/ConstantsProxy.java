@@ -36,7 +36,9 @@ import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class ConstantsProxy extends AbstractI18nProxy {
 
@@ -53,8 +55,14 @@ public class ConstantsProxy extends AbstractI18nProxy {
         return args -> constantType.copy(value);
     }
 
+    static Set<Class<? extends Annotation>> defaultAnnotations() {
+        return Arrays.stream(ConstantType.values())
+                .map(constantType -> constantType.defaultAnnotation)
+                .collect(Collectors.toSet());
+    }
+
     private enum ConstantType {
-        INT(int.class::equals) {
+        INT(DefaultIntValue.class, int.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultIntValue.class).value();
@@ -65,7 +73,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return Integer.valueOf(value);
             }
         },
-        FLOAT(float.class::equals) {
+        FLOAT(DefaultFloatValue.class, float.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultFloatValue.class).value();
@@ -76,7 +84,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return Float.valueOf(value);
             }
         },
-        DOUBLE(double.class::equals) {
+        DOUBLE(DefaultDoubleValue.class, double.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultDoubleValue.class).value();
@@ -87,7 +95,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return Double.valueOf(value);
             }
         },
-        BOOLEAN(boolean.class::equals) {
+        BOOLEAN(DefaultBooleanValue.class, boolean.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultBooleanValue.class).value();
@@ -98,7 +106,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return Boolean.valueOf(value);
             }
         },
-        STRING_ARRAY(type -> type.isArray() && type.getComponentType() == String.class) {
+        STRING_ARRAY(DefaultStringArrayValue.class, type -> type.isArray() && type.getComponentType() == String.class) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultStringArrayValue.class).value();
@@ -114,7 +122,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return ((String[]) value).clone();
             }
         },
-        STRING_MAP(Map.class::equals) {
+        STRING_MAP(DefaultStringMapValue.class, Map.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 String[] keysValues = annotation(method, DefaultStringMapValue.class).value();
@@ -137,7 +145,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return new HashMap<>((Map<?, ?>) value);
             }
         },
-        STRING(String.class::equals) {
+        STRING(DefaultStringValue.class, String.class::equals) {
             @Override
             Object defaultValue(Method method) {
                 return annotation(method, DefaultStringValue.class).value();
@@ -149,9 +157,11 @@ public class ConstantsProxy extends AbstractI18nProxy {
             }
         };
 
+        private final Class<? extends Annotation> defaultAnnotation;
         private final Predicate<Class<?>> matcher;
 
-        ConstantType(Predicate<Class<?>> matcher) {
+        ConstantType(Class<? extends Annotation> defaultAnnotation, Predicate<Class<?>> matcher) {
+            this.defaultAnnotation = defaultAnnotation;
             this.matcher = matcher;
         }
 

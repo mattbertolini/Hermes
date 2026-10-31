@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,8 +25,8 @@ import java.util.Locale;
 
 import com.google.gwt.i18n.client.Messages;
 import com.ibm.icu.util.ULocale;
-import junit.framework.Assert;
 
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -162,6 +162,22 @@ public class HermesTest {
     public void testNestedInterfaceLoadsBinaryNamedPropertiesFile() throws IOException {
         NestedMessagesTestData testData = Hermes.get(NestedMessagesTestData.class, "en_US");
         Assert.assertEquals("Nested interface message.", testData.NestedMessage());
+    }
+
+    @Test(expected = FileNotFoundException.class)
+    public void testConstantsWithoutPropertiesFileAndMissingDefaultFails() throws IOException {
+        Hermes.get(ConstantsMissingDefaultTestData.class, "en_US");
+    }
+
+    @Test(expected = FileNotFoundException.class)
+    public void testMessagesWithoutPropertiesFileRejectConstantsDefaults() throws IOException {
+        Hermes.get(MessagesWithConstantsDefaultTestData.class, "en_US");
+    }
+
+    @Test
+    public void testMessagesWithoutPropertiesFileAcceptAlternateMessageOnly() throws IOException {
+        MessagesWithAlternateMessageOnlyTestData testData = Hermes.get(MessagesWithAlternateMessageOnlyTestData.class, "en_US");
+        Assert.assertEquals("You have one thing.", testData.Things(1));
     }
 
     public interface NestedMessagesTestData extends Messages {
