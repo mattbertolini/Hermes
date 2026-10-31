@@ -41,6 +41,10 @@ public interface PluralMessagesTestData extends Messages {
     
     String PluralMessageWithCustomRuleNoDefaultConstructor(@PluralCount(NoDefaultConstructorPluralRule.class) int count);
     
+    @DefaultMessage("You have {0,number} counted items in your cart.")
+    @AlternateMessage({"one", "You have one counted item in your cart."})
+    String PluralMessageWithCountingRule(@PluralCount(CountingPluralRule.class) int count);
+    
     String PluralMessageMultiplePluralCount(@PluralCount int count1, @PluralCount int count2);
     
     @DefaultMessage("You have {0} messages and {1} notifications.")

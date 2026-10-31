@@ -19,6 +19,7 @@
 
 package com.mattbertolini.hermes;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.MissingResourceException;
@@ -34,10 +35,6 @@ public class ConstantsWithLookupProxyTest {
     @Before
     public void setUp() throws Exception {
         this.testData = Hermes.get(ConstantsWithLookupProxyTestData.class, "en_US");
-    }
-
-    @After
-    public void tearDown() throws Exception {
     }
     
     @Test
@@ -96,7 +93,7 @@ public class ConstantsWithLookupProxyTest {
     
     @Test
     public void testLookupMap() {
-        Map<String, String> expected = new HashMap<String, String>();
+        Map<String, String> expected = new HashMap<>();
         expected.put("MapKey1", "Map Value 1");
         expected.put("MapKey2", "Map Value 2");
         Map<String, String> actual = this.testData.getMap("LookupMap");
@@ -113,5 +110,38 @@ public class ConstantsWithLookupProxyTest {
     @Test(expected = MissingResourceException.class)
     public void testNonExistentMethodName() {
         this.testData.getString("notAMethodName");
+    }
+
+    @Test(expected = MissingResourceException.class)
+    public void testEmptyParameter() {
+        this.testData.getString("");
+    }
+
+    @Test
+    public void testLookupStringArrayIsNotShared() {
+        this.testData.getStringArray("LookupStringArray")[0] = "Changed";
+        Assert.assertEquals("Value 1", this.testData.getStringArray("LookupStringArray")[0]);
+        Assert.assertEquals("Value 1", this.testData.LookupStringArray()[0]);
+    }
+
+    @Test
+    public void testLookupMapIsNotShared() {
+        this.testData.getMap("LookupMap").put("MapKey1", "Changed");
+        Assert.assertEquals("Map Value 1", this.testData.getMap("LookupMap").get("MapKey1"));
+        Assert.assertEquals("Map Value 1", this.testData.LookupMap().get("MapKey1"));
+    }
+
+    @Test
+    public void testInheritedConstantCalledDirectly() throws IOException {
+        ConstantsWithLookupChildTestData child = Hermes.get(ConstantsWithLookupChildTestData.class, "en_US");
+        Assert.assertEquals("Parent value", child.ParentConstant());
+        Assert.assertEquals("Child value", child.ChildConstant());
+    }
+
+    @Test
+    public void testInheritedConstantLookup() throws IOException {
+        ConstantsWithLookupChildTestData child = Hermes.get(ConstantsWithLookupChildTestData.class, "en_US");
+        Assert.assertEquals("Parent value", child.getString("ParentConstant"));
+        Assert.assertEquals("Child value", child.getString("ChildConstant"));
     }
 }

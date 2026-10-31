@@ -19,13 +19,15 @@
 
 package com.mattbertolini.hermes;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ConstantsProxyTest {
     private ConstantsProxyTestData testData;
@@ -33,10 +35,6 @@ public class ConstantsProxyTest {
     @Before
     public void setUp() throws Exception {
         this.testData = Hermes.get(ConstantsProxyTestData.class, "en_US");
-    }
-
-    @After
-    public void tearDown() throws Exception {
     }
 
     @Test
@@ -134,7 +132,7 @@ public class ConstantsProxyTest {
     
     @Test
     public void testMapConstant() {
-        Map<String, String> expected = new HashMap<String, String>(3);
+        Map<String, String> expected = new HashMap<>(3);
         expected.put("MapKey1", "Map Value 1");
         expected.put("MapKey2", "Map Value 2");
         expected.put("MapKey3", "Map Value 3");
@@ -145,7 +143,7 @@ public class ConstantsProxyTest {
     
     @Test
     public void testMapConstantDefaultValue() {
-        Map<String, String> expected = new HashMap<String, String>(3);
+        Map<String, String> expected = new HashMap<>(3);
         expected.put("DefaultKey1", "DefaultValue1");
         expected.put("DefaultKey2", "DefaultValue2");
         Map<String, String> actual = this.testData.MapConstantDefaultValue();
@@ -158,5 +156,32 @@ public class ConstantsProxyTest {
         String expected = "com.mattbertolini.hermes.ConstantsProxy: com.mattbertolini.hermes.ConstantsProxyTestData";
         String actual = this.testData.toString();
         Assert.assertEquals(expected, actual);
+    }
+    
+    @Test
+    public void testProxyCanBeUsedInHashSet() {
+        Set<Object> set = new HashSet<>();
+        set.add(this.testData);
+        Assert.assertTrue(set.contains(this.testData));
+        Assert.assertEquals(this.testData.hashCode(), this.testData.hashCode());
+    }
+    
+    @Test
+    public void testEqualsIsIdentity() throws IOException {
+        Assert.assertEquals(this.testData, this.testData);
+        Assert.assertNotEquals(this.testData, Hermes.get(ConstantsProxyTestData.class, "fr"));
+        Assert.assertNotEquals(null, this.testData);
+    }
+    
+    @Test
+    public void testStringArrayConstantIsNotShared() {
+        this.testData.StringArrayConstant()[0] = "Changed";
+        Assert.assertEquals("Index1", this.testData.StringArrayConstant()[0]);
+    }
+    
+    @Test
+    public void testMapConstantIsNotShared() {
+        this.testData.MapConstant().put("MapKey1", "Changed");
+        Assert.assertEquals("Map Value 1", this.testData.MapConstant().get("MapKey1"));
     }
 }

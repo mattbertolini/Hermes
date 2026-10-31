@@ -19,9 +19,12 @@
 
 package com.mattbertolini.hermes;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TimeZone;
 
 import com.ibm.icu.util.ULocale;
@@ -54,7 +57,7 @@ public class MessagesProxyTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         TimeZone.setDefault(this.originalTimeZone);
     }
     
@@ -187,6 +190,12 @@ public class MessagesProxyTest {
     }
     
     @Test
+    public void testNoKeyFoundFailsOnEveryCall() {
+        Assert.assertThrows(RuntimeException.class, () -> this.testData.MessageWithNoKey());
+        Assert.assertThrows(RuntimeException.class, () -> this.testData.MessageWithNoKey());
+    }
+    
+    @Test
     public void testMessageWithEnumSelect() {
         String maleExpected = "He is not here.";
         String maleActual = this.testData.MessageWithEnumSelect(SelectEnum.MALE);
@@ -234,15 +243,15 @@ public class MessagesProxyTest {
     @Test
     public void testMessageWithLongSelect() {
         String fortyTwoExpected = "This is the long 42 string.";
-        String fortyTwoActual = this.testData.MessageWithLongSelect(42l);
+        String fortyTwoActual = this.testData.MessageWithLongSelect(42L);
         Assert.assertEquals(fortyTwoExpected, fortyTwoActual);
         
         String oneTwentyFourExpected = "This is the long 124 string.";
-        String oneTwentyFourActual = this.testData.MessageWithLongSelect(124l);
+        String oneTwentyFourActual = this.testData.MessageWithLongSelect(124L);
         Assert.assertEquals(oneTwentyFourExpected, oneTwentyFourActual);
         
         String defaultExpected = "This is the long default string.";
-        String defaultActual = this.testData.MessageWithLongSelect(24l);
+        String defaultActual = this.testData.MessageWithLongSelect(24L);
         Assert.assertEquals(defaultExpected, defaultActual);
     }
     
@@ -296,5 +305,20 @@ public class MessagesProxyTest {
         String expected = "com.mattbertolini.hermes.MessagesProxy: com.mattbertolini.hermes.MessagesProxyTestData";
         String actual = this.testData.toString();
         Assert.assertEquals(expected, actual);
+    }
+    
+    @Test
+    public void testProxyCanBeUsedInHashSet() {
+        Set<Object> set = new HashSet<>();
+        set.add(this.testData);
+        Assert.assertTrue(set.contains(this.testData));
+        Assert.assertEquals(this.testData.hashCode(), this.testData.hashCode());
+    }
+    
+    @Test
+    public void testEqualsIsIdentity() throws IOException {
+        Assert.assertEquals(this.testData, this.testData);
+        Assert.assertNotEquals(this.testData, Hermes.get(MessagesProxyTestData.class, "fr"));
+        Assert.assertFalse(this.testData.equals(null));
     }
 }

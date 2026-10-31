@@ -335,6 +335,26 @@ public class PluralMessagesTest {
     }
     
     @Test
+    public void testPluralMessageWithCustomRuleNoDefaultConstructorFailsOnEveryCall() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+        Assert.assertThrows(RuntimeException.class, () -> testData.PluralMessageWithCustomRuleNoDefaultConstructor(42));
+        Assert.assertThrows(RuntimeException.class, () -> testData.PluralMessageWithCustomRuleNoDefaultConstructor(42));
+    }
+    
+    @Test
+    public void testCustomPluralRuleInstantiatedOncePerMethod() throws IOException {
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
+
+        // The first call builds the handler (and the rule) unless an earlier test already did.
+        Assert.assertEquals("You have one counted item in your cart.", testData.PluralMessageWithCountingRule(1));
+        int instances = CountingPluralRule.INSTANCES.get();
+
+        Assert.assertEquals("You have 5 counted items in your cart.", testData.PluralMessageWithCountingRule(5));
+        Assert.assertEquals("You have 42 counted items in your cart.", testData.PluralMessageWithCountingRule(42));
+        Assert.assertEquals(instances, CountingPluralRule.INSTANCES.get());
+    }
+    
+    @Test
     public void testPluralMessageCustomRuleDefault() throws IOException {
         PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "en_US");
         
