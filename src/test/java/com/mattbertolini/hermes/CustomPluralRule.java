@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2011  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,9 @@ import java.util.Arrays;
 import com.google.gwt.i18n.client.PluralRule;
 
 public class CustomPluralRule implements PluralRule {
-    private static PluralForm[] rules = {
+    private static final PluralForm[] rules = {
         new PluralForm("other", "Default plural form."),
-        new PluralForm("one", "Singlar plural form."),
+        new PluralForm("one", "Singular plural form."),
         new PluralForm("custom", "Custom plural form when number is 42.")
     };
     

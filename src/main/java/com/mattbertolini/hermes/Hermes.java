@@ -100,35 +100,29 @@ public final class Hermes {
 
     @SuppressWarnings("unchecked")
     private static <T> T createProxy(Class<T> clazz, I18nType type, ULocale locale) throws IOException {
-        PropertiesLocalePair result = getPropertiesForClass(clazz, locale);
-        Properties properties = result.getProperties();
-        // This is the actual locale the proxy classes will be given. It may be 
-        // changed from the locale given by the user if a locale fallback is 
-        // required.
-        ULocale realLocale = result.getLocale();
-        InvocationHandler handler = type.create(clazz, realLocale, properties);
+        Properties properties = getPropertiesForClass(clazz, locale);
+        // Formatting and plural rules always follow the requested locale, even
+        // when the text falls back to a less specific properties file.
+        ULocale formattingLocale = locale != null ? locale : ULocale.getDefault();
+        InvocationHandler handler = type.create(clazz, formattingLocale, properties);
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, handler);
     }
 
-    private static <T> PropertiesLocalePair getPropertiesForClass(Class<T> clazz, ULocale locale) throws IOException {
+    private static Properties getPropertiesForClass(Class<?> clazz, ULocale locale) throws IOException {
         if (I18nType.isRootInterface(clazz)) {
-            return new PropertiesLocalePair(new Properties(), locale);
+            return new Properties();
         }
         // Get parent properties first - allowing for multiple inheritance
         Properties properties = new Properties();
         for (Class<?> parent : clazz.getInterfaces()) {
             if (isValidSubclass(parent)) {
-                properties.putAll(getPropertiesForClass(parent, locale).getProperties());
+                properties.putAll(getPropertiesForClass(parent, locale));
             }
         }
 
-        // This is the actual locale the proxy classes will be given. It may be
-        // changed from the locale given by the user if a locale fallback is
-        // required.
-        ULocale realLocale = locale;
         // Build list of locales from least to most specific, including default null locale
         List<ULocale> localeChain = new ArrayList<>();
-        localeChain.add(realLocale);
+        localeChain.add(locale);
         ULocale parentLocale = locale;
         while (parentLocale != null) {
             parentLocale = parentLocale.getFallback();
@@ -142,19 +136,15 @@ public final class Hermes {
                 if (is != null) {
                     try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
                         properties.load(reader);
-                        realLocale = currentLocale;
                         propertiesFileFound = true;
                     }
                 }
             }
         }
-        if (realLocale == null) {
-            realLocale = ULocale.getDefault();
-        }
         if (!propertiesFileFound) {
             checkPropertyFileNeeded(clazz);
         }
-        return new PropertiesLocalePair(properties, realLocale);
+        return properties;
     }
 
     // If a property file has not been provided, check all properties have valid annotations
@@ -204,24 +194,6 @@ public final class Hermes {
 
     private static boolean isValidSubclass(Class<?> clazz) {
         return I18nType.of(clazz).isPresent();
-    }
-
-    static class PropertiesLocalePair {
-        private final Properties properties;
-        private final ULocale locale;
-
-        public PropertiesLocalePair(Properties properties, ULocale locale) {
-            this.properties = properties;
-            this.locale = locale;
-        }
-
-        public Properties getProperties() {
-            return properties;
-        }
-
-        public ULocale getLocale() {
-            return locale;
-        }
     }
 
     @FunctionalInterface

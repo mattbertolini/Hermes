@@ -7,6 +7,10 @@ Version 2.0.0 -- TBD
 * Major version upgrade
 * Java 8 minimum required
 * Large refactoring of proxy internals
+* Number/date formatting and plural rules now always use the requested locale.
+  Previously, if no properties file existed for the requested locale, they
+  used the locale of the fallback file, or the JVM default locale when falling
+  back to the default properties file.
 *
 
 Version 1.2.0 -- 2011-05-12

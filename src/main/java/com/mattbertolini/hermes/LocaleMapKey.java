@@ -1,6 +1,6 @@
 /*
  * Hermes - GWT Server-side I18N Library
- * Copyright (C) 2012  Matt Bertolini
+ * Copyright (C) 2011-2026  Matt Bertolini
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,11 +21,11 @@ package com.mattbertolini.hermes;
 
 import com.ibm.icu.util.ULocale;
 
+import java.util.Objects;
+
 /**
  * Wrapper class around a class name and ULocale for use in a cache map. This 
  * class is immutable.
- * 
- * @author Matt Bertolini
  */
 public final class LocaleMapKey {
     private final String className;
@@ -45,41 +45,16 @@ public final class LocaleMapKey {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result
-                + ((className == null) ? 0 : className.hashCode());
-        result = prime * result + ((locale == null) ? 0 : locale.hashCode());
-        return result;
+    public boolean equals(Object o) {
+        if (!(o instanceof LocaleMapKey)) {
+            return false;
+        }
+        LocaleMapKey that = (LocaleMapKey) o;
+        return Objects.equals(className, that.className) && Objects.equals(locale, that.locale);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (!(obj instanceof LocaleMapKey)) {
-            return false;
-        }
-        LocaleMapKey other = (LocaleMapKey) obj;
-        if (className == null) {
-            if (other.className != null) {
-                return false;
-            }
-        } else if (!className.equals(other.className)) {
-            return false;
-        }
-        if (locale == null) {
-            if (other.locale != null) {
-                return false;
-            }
-        } else if (!locale.equals(other.locale)) {
-            return false;
-        }
-        return true;
+    public int hashCode() {
+        return Objects.hash(className, locale);
     }
 }

@@ -311,7 +311,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         return allOther ? baseName : pluralNames.stream().collect(joining(SEPARATOR, baseName + OPEN_BRACKET, CLOSE_BRACKET));
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("deprecation") // PluralText is deprecated, but we want to support it for backwards compatibility
     private Map<String, String> buildAlternateMessages(String baseName, Method method) {
         String[] values = Optional.ofNullable(method.getAnnotation(AlternateMessage.class))
                 .map(AlternateMessage::value)

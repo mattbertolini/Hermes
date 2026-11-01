@@ -180,6 +180,34 @@ public class HermesTest {
         Assert.assertEquals("You have one thing.", testData.Things(1));
     }
 
+    @Test
+    public void testFormattingUsesRequestedLocaleWhenTextFallsBackToDefaultFile() throws IOException {
+        // There is no MessagesProxyTestData_de.properties, so the text comes from the default file.
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, "de");
+        Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12.345,67.",
+                testData.MessageWithNumberFormattedArgument(12345.67d));
+    }
+
+    @Test
+    public void testFormattingUsesRequestedLocaleWithoutPropertiesFile() throws IOException {
+        NumberWithoutPropertiesFileTestData testData = Hermes.get(NumberWithoutPropertiesFileTestData.class, "de");
+        Assert.assertEquals("The number is 12.345,67.", testData.NumberMessage(12345.67d));
+    }
+
+    @Test
+    public void testPluralRulesUseRequestedLocaleWhenTextFallsBackToDefaultFile() throws IOException {
+        // There is no PluralMessagesTestData_ru.properties. Russian selects "few" for 3, where English selects "other".
+        PluralMessagesTestData testData = Hermes.get(PluralMessagesTestData.class, "ru");
+        Assert.assertEquals("You have 3 items in your cart, which is few.", testData.PluralMessageDefaultMessages(3));
+    }
+
+    @Test
+    public void testFormattingUsesDefaultLocaleWhenNoLocaleRequested() throws IOException {
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, null);
+        Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12,345.67.",
+                testData.MessageWithNumberFormattedArgument(12345.67d));
+    }
+
     public interface NestedMessagesTestData extends Messages {
         String NestedMessage();
     }
