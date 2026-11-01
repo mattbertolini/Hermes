@@ -60,9 +60,10 @@ public class DefaultMethodsTest {
     }
 
     @Test
-    public void testJava8InvokerUnsupportedFromJava16() {
-        // Java 9-15 still allow the Lookup constructor (with an illegal-access warning)
-        assertSupported(javaVersion() < 16, DefaultMethods.Java8Invoker::new);
+    public void testJava8InvokerUnsupportedFromJava14() {
+        // Java 9-13 still allow the Lookup(Class, int) constructor (with an illegal-access warning).
+        // Java 14 replaced it with Lookup(Class, Class, int).
+        assertSupported(javaVersion() < 14, DefaultMethods.Java8Invoker::new);
     }
 
     @Test

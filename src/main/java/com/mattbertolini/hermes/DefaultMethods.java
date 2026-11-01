@@ -38,6 +38,12 @@ import java.util.Objects;
  * </ul>
  * The first strategy the running JVM supports is chosen once, when this class
  * loads.
+ * <p>
+ * Limitation: on Java 16+, {@code InvocationHandler.invokeDefault} checks that
+ * its caller (Hermes) can access the method's interface, so default methods of
+ * a non-public interface outside {@code com.mattbertolini.hermes} throw
+ * {@code IllegalAccessException}. Java 8-15 allow them. Make i18n interfaces
+ * with default methods public.
  */
 final class DefaultMethods {
     private static final Invoker INVOKER = Invoker.forRuntime();
@@ -60,6 +66,8 @@ final class DefaultMethods {
      *                                  method is not a default method of one of its interfaces, or the
      *                                  arguments do not match the method's parameters
      * @throws NullPointerException     if proxy or method is null
+     * @throws IllegalAccessException   on Java 16+, if the method's interface is not
+     *                                  accessible to Hermes (see the class documentation)
      * @throws Throwable                anything thrown by the default method
      */
     static Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
