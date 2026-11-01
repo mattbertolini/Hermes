@@ -101,8 +101,16 @@ public class HermesTest {
 
     @Test
     public void testClassOverridesSuperclassProperties() throws IOException {
-        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, null);
         String expected = "This is a basic message with no key overridden by subclass.";
+        String actual = testData.BasicMessageWithNoKey();
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testSuperclassLocaleOverridesSubclassDefaultProperties() throws IOException {
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, "fr_CA");
+        String expected = "[fr] This is a basic message with no key.";
         String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
     }
@@ -174,10 +182,9 @@ public class HermesTest {
         Hermes.get(MessagesWithConstantsDefaultTestData.class, "en_US");
     }
 
-    @Test
-    public void testMessagesWithoutPropertiesFileAcceptAlternateMessageOnly() throws IOException {
-        MessagesWithAlternateMessageOnlyTestData testData = Hermes.get(MessagesWithAlternateMessageOnlyTestData.class, "en_US");
-        Assert.assertEquals("You have one thing.", testData.Things(1));
+    @Test(expected = FileNotFoundException.class)
+    public void testMessagesWithoutPropertiesFileRejectAlternateMessageOnly() throws IOException {
+        Hermes.get(MessagesWithAlternateMessageOnlyTestData.class, "en_US");
     }
 
     @Test
@@ -206,6 +213,34 @@ public class HermesTest {
         MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, null);
         Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12,345.67.",
                 testData.MessageWithNumberFormattedArgument(12345.67d));
+    }
+
+    @Test
+    public void testFormattingFollowsDefaultLocaleChangesWhenNoLocaleRequested() throws IOException {
+        Hermes.get(MessagesProxyTestData.class, null);
+        ULocale.setDefault(ULocale.GERMANY);
+        try {
+            MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, null);
+            Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12.345,67.",
+                    testData.MessageWithNumberFormattedArgument(12345.67d));
+        } finally {
+            ULocale.setDefault(ULocale.US);
+        }
+    }
+
+    @Test
+    public void testDefaultMethodBodyIsInvoked() throws IOException {
+        DefaultMethodMessagesTestData testData = Hermes.get(DefaultMethodMessagesTestData.class, "en_US");
+        Assert.assertEquals("Hello, WORLD.", testData.greetLoudly("world"));
+    }
+
+    public interface DefaultMethodMessagesTestData extends Messages {
+        @DefaultMessage("Hello, {0}.")
+        String greet(String name);
+
+        default String greetLoudly(String name) {
+            return greet(name.toUpperCase(Locale.ROOT));
+        }
     }
 
     public interface NestedMessagesTestData extends Messages {

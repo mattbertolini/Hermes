@@ -24,16 +24,18 @@ import com.ibm.icu.util.ULocale;
 import java.util.Objects;
 
 /**
- * Wrapper class around a class name and ULocale for use in a cache map. This 
- * class is immutable.
+ * Wrapper class around a class name, the requested ULocale and the formatting
+ * ULocale for use in a cache map. This class is immutable.
  */
 public final class LocaleMapKey {
     private final String className;
     private final ULocale locale;
-    
-    public LocaleMapKey(String className, ULocale locale) {
+    private final ULocale formattingLocale;
+
+    public LocaleMapKey(String className, ULocale locale, ULocale formattingLocale) {
         this.className = className;
         this.locale = locale;
+        this.formattingLocale = formattingLocale;
     }
 
     public String getClassName() {
@@ -44,17 +46,22 @@ public final class LocaleMapKey {
         return this.locale;
     }
 
+    public ULocale getFormattingLocale() {
+        return this.formattingLocale;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof LocaleMapKey)) {
             return false;
         }
         LocaleMapKey that = (LocaleMapKey) o;
-        return Objects.equals(className, that.className) && Objects.equals(locale, that.locale);
+        return Objects.equals(className, that.className) && Objects.equals(locale, that.locale)
+                && Objects.equals(formattingLocale, that.formattingLocale);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(className, locale);
+        return Objects.hash(className, locale, formattingLocale);
     }
 }

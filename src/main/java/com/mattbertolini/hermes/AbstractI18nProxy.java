@@ -43,9 +43,12 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
     }
     
     @Override
-    public final Object invoke(Object proxy, Method method, Object[] args) {
+    public final Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass() == Object.class) {
             return invokeObjectMethod(proxy, method, args);
+        }
+        if (method.isDefault()) {
+            return DefaultMethods.invokeDefault(proxy, method, args);
         }
         return handlerFor(method).handle(args);
     }

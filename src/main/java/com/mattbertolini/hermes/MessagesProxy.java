@@ -49,6 +49,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -103,6 +104,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         private final Map<String, String> alternateMessages;
         private final String defaultMessage;
         private final MessageRenderer renderer;
+        private final Map<String, MessageFormat> formats = new ConcurrentHashMap<>();
 
         public MessageHandler(Method method) {
             key = keyFor(method);
@@ -124,7 +126,11 @@ public class MessagesProxy extends AbstractI18nProxy {
                     .map(forms -> buildPatternName(key, forms))
                     .distinct()
                     .collect(toList());
-            MessageFormat formatter = new MessageFormat(findPattern(patternNames), getLocale());
+            // Parse each pattern once. MessageFormat isn't thread-safe, so each call
+            // formats with its own clone of the parsed instance.
+            MessageFormat formatter = (MessageFormat) formats
+                    .computeIfAbsent(findPattern(patternNames), pattern -> new MessageFormat(pattern, getLocale()))
+                    .clone();
             return renderer.render(formatter, adjust(args));
         }
 
