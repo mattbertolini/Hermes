@@ -42,7 +42,7 @@ snippet.
 <dependency>
   <groupId>com.mattbertolini</groupId>
   <artifactId>hermes</artifactId>
-  <version>1.2.0</version>
+  <version>2.0.0-SNAPSHOT</version>
 </dependency>
 
 ## Frequently Asked Questions
