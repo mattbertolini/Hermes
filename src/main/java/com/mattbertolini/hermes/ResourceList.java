@@ -27,14 +27,14 @@ import java.util.List;
  * locale, the interface before its parents), where the first resource
  * defining a key wins. Mirrors GWT's ResourceList.
  */
-final class ResourceList {
+public final class ResourceList {
     private final List<Resource> resources;
 
-    ResourceList(List<Resource> resources) {
+    public ResourceList(List<Resource> resources) {
         this.resources = new ArrayList<>(resources);
     }
 
-    String getString(String key) {
+    public String getString(String key) {
         Resource entry = getEntry(key);
         return entry == null ? null : entry.get(key);
     }
@@ -42,7 +42,7 @@ final class ResourceList {
     /**
      * First {@code key[form]} value in any resource, as GWT's getStringExt.
      */
-    String getForm(String key, String form) {
+    public String getForm(String key, String form) {
         for (Resource resource : resources) {
             String value = resource.getForm(key, form);
             if (value != null) {
@@ -56,7 +56,7 @@ final class ResourceList {
      * The first resource defining the key. A message's alternate forms come
      * from this resource only, never from less specific ones.
      */
-    Resource getEntry(String key) {
+    public Resource getEntry(String key) {
         for (Resource resource : resources) {
             if (resource.get(key) != null) {
                 return resource;

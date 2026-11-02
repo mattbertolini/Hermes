@@ -33,7 +33,7 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
     private final ULocale locale;
     private final Map<Method, MethodHandler> handlers;
     
-    AbstractI18nProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
+    protected AbstractI18nProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
         this.clazz = clazz;
         this.resources = resources;
         this.locale = locale;
@@ -51,7 +51,7 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
         return handlerFor(method).handle(args);
     }
     
-    ResourceList getResources() {
+    protected ResourceList getResources() {
         return this.resources;
     }
     

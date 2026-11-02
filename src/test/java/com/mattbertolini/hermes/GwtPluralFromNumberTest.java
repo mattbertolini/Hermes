@@ -21,6 +21,8 @@ package com.mattbertolini.hermes;
 
 import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
+import com.mattbertolini.hermes.messages.GwtPlural;
+import com.mattbertolini.hermes.messages.Plural;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

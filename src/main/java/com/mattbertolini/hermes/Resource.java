@@ -30,7 +30,7 @@ import java.util.Set;
  * annotations on one interface - like GWT's AbstractResource. Alternate forms
  * are stored as {@code key[form]} entries.
  */
-final class Resource {
+public final class Resource {
     private static final char OPEN_BRACKET = '[';
     private static final char CLOSE_BRACKET = ']';
 
@@ -48,16 +48,16 @@ final class Resource {
         }
     }
 
-    String get(String key) {
+    public String get(String key) {
         return values.get(key);
     }
 
-    String getForm(String key, String form) {
+    public String getForm(String key, String form) {
         return values.get(formKey(key, form));
     }
 
     /** The alternate form names defined for a key in this resource. */
-    Set<String> getForms(String key) {
+    public Set<String> getForms(String key) {
         return forms.getOrDefault(key, Collections.emptySet());
     }
 

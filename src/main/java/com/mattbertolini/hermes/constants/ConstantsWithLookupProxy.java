@@ -17,10 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package com.mattbertolini.hermes;
+package com.mattbertolini.hermes.constants;
 
 import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.ibm.icu.util.ULocale;
+import com.mattbertolini.hermes.MethodHandler;
+import com.mattbertolini.hermes.ResourceList;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -28,7 +30,7 @@ import java.util.MissingResourceException;
 
 public class ConstantsWithLookupProxy extends ConstantsProxy {
 
-    ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
+    public ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
         super(clazz, locale, resources);
     }
 

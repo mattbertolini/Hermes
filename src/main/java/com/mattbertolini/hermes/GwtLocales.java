@@ -32,7 +32,7 @@ import java.util.List;
  * searched in the same order GWT uses: script and region inheritance
  * (zh_TW -> zh_Hant, es_MX -> es_419) and legacy aliases (iw/he, in/id).
  */
-final class GwtLocales {
+public final class GwtLocales {
     // GwtLocaleFactoryImpl caches instances in an unsynchronized map
     private static final GwtLocaleFactory FACTORY = new GwtLocaleFactoryImpl();
 
@@ -43,7 +43,7 @@ final class GwtLocales {
     /**
      * @param localeStr a locale ID, or null/empty for the default locale
      */
-    static GwtLocale fromString(String localeStr) {
+    public static GwtLocale fromString(String localeStr) {
         synchronized (FACTORY) {
             return FACTORY.fromString(localeStr == null || localeStr.isEmpty() ? null : localeStr);
         }
@@ -53,7 +53,7 @@ final class GwtLocales {
      * The locales to search, most specific first and ending with the default
      * locale, without the duplicates GWT's list can contain.
      */
-    static List<GwtLocale> searchList(GwtLocale locale) {
+    public static List<GwtLocale> searchList(GwtLocale locale) {
         synchronized (FACTORY) {
             return new ArrayList<>(new LinkedHashSet<>(locale.getCompleteSearchList()));
         }

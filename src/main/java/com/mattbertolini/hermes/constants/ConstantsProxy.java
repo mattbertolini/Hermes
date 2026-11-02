@@ -17,9 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package com.mattbertolini.hermes;
+package com.mattbertolini.hermes.constants;
 
 import com.ibm.icu.util.ULocale;
+import com.mattbertolini.hermes.AbstractI18nProxy;
+import com.mattbertolini.hermes.MethodHandler;
+import com.mattbertolini.hermes.ResourceList;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -31,7 +34,7 @@ import java.util.function.Predicate;
 
 public class ConstantsProxy extends AbstractI18nProxy {
 
-    ConstantsProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
+    public ConstantsProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
         super(clazz, locale, resources);
     }
 

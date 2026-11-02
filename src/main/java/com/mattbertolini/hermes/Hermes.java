@@ -24,6 +24,9 @@ import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.google.gwt.i18n.client.Messages;
 import com.google.gwt.i18n.shared.GwtLocale;
 import com.ibm.icu.util.ULocale;
+import com.mattbertolini.hermes.constants.ConstantsProxy;
+import com.mattbertolini.hermes.constants.ConstantsWithLookupProxy;
+import com.mattbertolini.hermes.messages.MessagesProxy;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
