@@ -21,6 +21,7 @@ package com.mattbertolini.hermes;
 
 import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.ibm.icu.util.ULocale;
+import com.mattbertolini.hermes.internal.reflect.DefaultMethods;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

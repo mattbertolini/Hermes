@@ -17,7 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package com.mattbertolini.hermes;
+package com.mattbertolini.hermes.internal.reflect;
+
+import com.mattbertolini.hermes.internal.util.Assert;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -41,11 +43,11 @@ import java.util.Objects;
  * <p>
  * Limitation: on Java 16+, {@code InvocationHandler.invokeDefault} checks that
  * its caller (Hermes) can access the method's interface, so default methods of
- * a non-public interface outside {@code com.mattbertolini.hermes} throw
- * {@code IllegalAccessException}. Java 8-15 allow them. Make i18n interfaces
+ * a non-public interface outside {@code com.mattbertolini.hermes.internal.reflect}
+ * throw {@code IllegalAccessException}. Java 8-15 allow them. Make i18n interfaces
  * with default methods public.
  */
-final class DefaultMethods {
+public final class DefaultMethods {
     private static final Invoker INVOKER = Invoker.forRuntime();
 
     private DefaultMethods() {
@@ -70,19 +72,19 @@ final class DefaultMethods {
      *                                  accessible to Hermes (see the class documentation)
      * @throws Throwable                anything thrown by the default method
      */
-    static Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
+    public static Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
         return runtimeInvoker().invokeDefault(proxy, method, args);
     }
 
     /**
      * The strategy chosen for the running JVM.
      */
-    static Invoker runtimeInvoker() {
+    public static Invoker runtimeInvoker() {
         return INVOKER;
     }
 
     @FunctionalInterface
-    interface Invoker {
+    public interface Invoker {
         Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable;
 
         /**
@@ -153,25 +155,15 @@ final class DefaultMethods {
         abstract MethodHandles.Lookup lookupFor(Class<?> declaringClass) throws Throwable;
 
         private static void checkInvocation(Object proxy, Method method, Object[] args) {
-            if (!Proxy.isProxyClass(proxy.getClass())) {
-                throw new IllegalArgumentException("'proxy' is not a proxy instance");
-            }
-            if (!method.isDefault()) {
-                throw new IllegalArgumentException("\"" + method + "\" is not a default method");
-            }
-            if (!method.getDeclaringClass().isInstance(proxy)) {
-                throw new IllegalArgumentException("\"" + method + "\" is not a method declared in a proxy interface of "
-                        + proxy.getClass().getName());
-            }
+            Assert.argument(Proxy.isProxyClass(proxy.getClass()), "'proxy' is not a proxy instance");
+            Assert.argument(method.isDefault(), "\"%s\" is not a default method", method);
+            Assert.argument(method.getDeclaringClass().isInstance(proxy), "\"%s\" is not a method declared in a proxy interface of %s",
+                    method, proxy.getClass().getName());
+
             Class<?>[] parameterTypes = method.getParameterTypes();
-            if (args.length != parameterTypes.length) {
-                throw new IllegalArgumentException("wrong number of parameters: expected " + parameterTypes.length
-                        + " but was " + args.length);
-            }
+            Assert.argument(args.length == parameterTypes.length, "wrong number of parameters: expected %s but was %s", parameterTypes.length, args.length);
             for (int i = 0; i < args.length; i++) {
-                if (!isAssignable(parameterTypes[i], args[i])) {
-                    throw new IllegalArgumentException("argument " + i + " cannot be assigned to " + parameterTypes[i].getName());
-                }
+                Assert.argument(isAssignable(parameterTypes[i], args[i]), "argument %s cannot be assigned to %s", i, parameterTypes[i].getName());
             }
         }
 
