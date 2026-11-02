@@ -19,26 +19,23 @@
 
 package com.mattbertolini.hermes;
 
-import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.ibm.icu.util.ULocale;
 import com.mattbertolini.hermes.internal.reflect.DefaultMethods;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractI18nProxy implements InvocationHandler {
     private final Class<?> clazz;
-    private final Properties properties;
+    private final ResourceList resources;
     private final ULocale locale;
     private final Map<Method, MethodHandler> handlers;
     
-    public AbstractI18nProxy(Class<?> clazz, ULocale locale, Properties properties) {
+    AbstractI18nProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
         this.clazz = clazz;
-        this.properties = properties;
+        this.resources = resources;
         this.locale = locale;
         handlers = new ConcurrentHashMap<>();
     }
@@ -54,8 +51,8 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
         return handlerFor(method).handle(args);
     }
     
-    protected Properties getProperties() {
-        return this.properties;
+    ResourceList getResources() {
+        return this.resources;
     }
     
     protected ULocale getLocale() {
@@ -70,13 +67,11 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
         return handlers.computeIfAbsent(method, this::createHandler);
     }
 
-    protected abstract MethodHandler createHandler(Method method);
-
-    protected static String keyFor(Method method) {
-        return Optional.ofNullable(method.getAnnotation(Key.class))
-                .map(Key::value)
-                .orElse(method.getName());
+    protected String keyFor(Method method) {
+        return Keys.keyFor(this.clazz, method);
     }
+
+    protected abstract MethodHandler createHandler(Method method);
 
     @Override
     public String toString() {

@@ -16,22 +16,23 @@ LICENSE file for full license information.
 
 ## Requirements
 
-Hermes version 1.2 requires Java 1.6, GWT 2.2, and ICU 4.6 to run. If you need 
-GWT 2.1 support, use the 1.1.x line.
+Hermes version 2.0 requires Java 8, GWT 2.2 or later, and ICU4J 74.2 to run.
+Hermes version 1.2 requires Java 1.6, GWT 2.2, and ICU 4.6. If you need GWT 2.1
+support, use the 1.1.x line.
 
 ## Differences Between Hermes and GWT I18N
 
 * Since the server side does not have access to the GWT locale information, you 
   are required to pass the locale to Hermes in order to get the correct data.
 
-* The locale hierarchy and fallback system as described in the GWT Constants 
-  Javadoc is not supported. The locale given to Hermes must match a valid 
-  properties file or it will use the default properties file.
-  
-* Plural form exact values and offsets are not supported.
+* Hermes aims to behave exactly like GWT: properties files are searched in
+  GWT's locale order (including script, region and alias fallbacks), and
+  annotations, @GenerateKeys, @DefaultLocale, alternate forms, {0,list} and
+  {0,localdatetime,skeleton} follow GWT's rules. Interfaces GWT would refuse to
+  compile are rejected with an IllegalArgumentException when the method is
+  first called, rather than at compile time.
 
-* GWT extension {name,text}, {0,list}, {0,localdatetime,skeleton}, and extra 
-  formatter arguments are not supported.  
+* GWT extension {name,text} and extra formatter arguments are not supported.
   
 ## Maven Artifact Info
 

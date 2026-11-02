@@ -23,13 +23,13 @@ import com.google.gwt.i18n.client.Constants;
 import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.google.gwt.i18n.client.Messages;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
+import com.google.gwt.i18n.shared.GwtLocale;
 import com.ibm.icu.util.ULocale;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -39,7 +39,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +52,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class Hermes {
     private static final char DOT = '.';
-    private static final char OPEN_BRACKET = '[';
+    private static final char LOCALE_SEPARATOR = '_';
     private static final String PROPERTIES_EXT = ".properties";
 
-    private static final Map<LocaleMapKey, Object> CACHE = new ConcurrentHashMap<>();
+    // Keyed by Class (not name) so same-named classes from different class
+    // loaders don't collide, and cached proxies don't pin unloaded loaders.
+    private static final ClassValue<Map<LocaleMapKey, Object>> CACHE = new ClassValue<Map<LocaleMapKey, Object>>() {
+        @Override
+        protected Map<LocaleMapKey, Object> computeValue(Class<?> type) {
+            return new ConcurrentHashMap<>();
+        }
+    };
 
     private Hermes() {
         throw new UnsupportedOperationException("Hermes is a utility class and cannot be instantiated");
@@ -64,7 +73,9 @@ public final class Hermes {
      * dynamic proxy for use on the server-side. If no locale is given, the
      * default properties file will be loaded. This method caches proxy classes
      * that it has created so it is safe to call multiple times. Locale IDs
-     * are case-sensitive (i.e. en_us is not the same as en_US).
+     * are canonicalized before use (i.e. en_us is treated as en_US), and
+     * properties files are searched in GWT's order, including script, region
+     * and alias fallbacks (e.g. zh_TW uses zh_Hant files).
      *
      * @param clazz     The GWT i18n interface to get the proxy for.
      * @param localeStr The locale ID string for the locale being requested.
@@ -81,99 +92,88 @@ public final class Hermes {
         I18nType type = I18nType.of(clazz).orElseThrow(() -> new IllegalArgumentException(
                 "Class " + clazz.getName() + " does not implement required interfaces."));
 
-        ULocale locale;
-        if (localeStr != null && !localeStr.isEmpty()) {
-            locale = ULocale.createCanonical(localeStr);
-        } else {
-            locale = null;
-        }
+        GwtLocale gwtLocale = GwtLocales.fromString(localeStr);
+        ULocale locale = gwtLocale.isDefault() ? null : new ULocale(gwtLocale.getAsString());
         // Formatting and plural rules always follow the requested locale, even
         // when the text falls back to a less specific properties file. With no
         // locale requested, the current default is part of the cache key so a
         // later default change gets a proxy that formats with the new default.
-        ULocale formattingLocale = locale != null ? locale : ULocale.getDefault();
+        ULocale formattingLocale = locale != null ? ULocale.createCanonical(localeStr) : ULocale.getDefault();
         LocaleMapKey key = new LocaleMapKey(clazz.getName(), locale, formattingLocale);
-        try {
-            return (T) CACHE.computeIfAbsent(key, k -> {
-                try {
-                    return createProxy(clazz, type, locale, formattingLocale);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            });
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
+        Map<LocaleMapKey, Object> proxies = CACHE.get(clazz);
+        Object proxy = proxies.get(key);
+        if (proxy == null) {
+            // Built outside the map so resource I/O doesn't hold its lock; a racing
+            // duplicate build is harmless and the first one stored wins.
+            Object created = createProxy(clazz, type, gwtLocale, formattingLocale);
+            proxy = proxies.putIfAbsent(key, created);
+            if (proxy == null) {
+                proxy = created;
+            }
         }
+        return (T) proxy;
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T createProxy(Class<T> clazz, I18nType type, ULocale locale, ULocale formattingLocale)
+    private static <T> T createProxy(Class<T> clazz, I18nType type, GwtLocale locale, ULocale formattingLocale)
             throws IOException {
-        Properties properties = getPropertiesForClass(clazz, locale);
-        InvocationHandler handler = type.create(clazz, formattingLocale, properties);
+        ResourceList resources = getResourcesForClass(clazz, locale);
+        InvocationHandler handler = type.create(clazz, formattingLocale, resources);
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, handler);
     }
 
-    private static Properties getPropertiesForClass(Class<?> clazz, ULocale locale) throws IOException {
-        // Build list of locales from least to most specific, including default null locale
-        List<ULocale> localeChain = new ArrayList<>();
-        localeChain.add(locale);
-        ULocale parentLocale = locale;
-        while (parentLocale != null) {
-            parentLocale = parentLocale.getFallback();
-            // ROOT has an empty name and would only probe a nonexistent "Name_.properties"
-            if (!ULocale.ROOT.equals(parentLocale)) {
-                localeChain.add(0, parentLocale);
+    /**
+     * Builds GWT's resource search order: for each locale, most specific
+     * first, each interface (child before parents) contributes its properties
+     * file and then, at the default locale and the interface's own
+     * {@code @DefaultLocale}, its annotations.
+     */
+    private static ResourceList getResourcesForClass(Class<?> clazz, GwtLocale locale) throws IOException {
+        Set<Class<?>> hierarchy = new LinkedHashSet<>();
+        collectHierarchy(clazz, hierarchy);
+        Map<Class<?>, Resource> annotations = new HashMap<>();
+        Map<Class<?>, GwtLocale> annotationLocales = new HashMap<>();
+        for (Class<?> current : hierarchy) {
+            I18nType type = I18nType.of(current).orElseThrow(IllegalStateException::new);
+            Resource resource = AnnotationResources.forClass(current, type.isConstants());
+            if (!resource.isEmpty()) {
+                annotations.put(current, resource);
+                annotationLocales.put(current, AnnotationResources.annotationLocale(current));
             }
         }
 
-        // Locale specificity outranks inheritance: each locale level loads the whole
-        // interface hierarchy (parents before child) before the next, more specific, level.
-        Properties properties = new Properties();
-        Set<Class<?>> hierarchy = new LinkedHashSet<>();
+        List<Resource> resources = new ArrayList<>();
         Set<Class<?>> classesWithFiles = new HashSet<>();
-        for (ULocale currentLocale : localeChain) {
-            loadProperties(clazz, currentLocale, properties, hierarchy, classesWithFiles);
+        for (GwtLocale searchLocale : GwtLocales.searchList(locale)) {
+            for (Class<?> current : hierarchy) {
+                Resource file = loadPropertiesFile(current, searchLocale);
+                if (file != null) {
+                    resources.add(file);
+                    classesWithFiles.add(current);
+                }
+                Resource annotationResource = annotations.get(current);
+                if (annotationResource != null
+                        && (searchLocale.isDefault() || searchLocale.equals(annotationLocales.get(current)))) {
+                    resources.add(annotationResource);
+                }
+            }
         }
         for (Class<?> current : hierarchy) {
             if (!classesWithFiles.contains(current)) {
                 checkPropertyFileNeeded(current);
             }
         }
-        return properties;
+        return new ResourceList(resources);
     }
 
-    private static void loadProperties(Class<?> clazz, ULocale locale, Properties properties,
-                                       Set<Class<?>> hierarchy, Set<Class<?>> classesWithFiles) throws IOException {
-        if (I18nType.isRootInterface(clazz)) {
+    // Depth-first, child before parents, each interface once - GWT's walkInheritanceTree
+    private static void collectHierarchy(Class<?> clazz, Set<Class<?>> hierarchy) {
+        if (I18nType.isRootInterface(clazz) || !hierarchy.add(clazz)) {
             return;
         }
-        // Load parent properties first - allowing for multiple inheritance
         for (Class<?> parent : clazz.getInterfaces()) {
             if (isValidSubclass(parent)) {
-                loadProperties(parent, locale, properties, hierarchy, classesWithFiles);
-            }
-        }
-        hierarchy.add(clazz);
-
-        try (InputStream is = getPropertiesFile(clazz, locale)) {
-            if (is != null) {
-                try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-                    Properties localeProperties = new Properties();
-                    localeProperties.load(reader);
-                    // A base key redefined here brings its own alternate forms, so drop
-                    // key[...] forms inherited from less specific files.
-                    for (String name : localeProperties.stringPropertyNames()) {
-                        if (name.indexOf(OPEN_BRACKET) < 0) {
-                            String formPrefix = name + OPEN_BRACKET;
-                            properties.stringPropertyNames().stream()
-                                    .filter(existing -> existing.startsWith(formPrefix))
-                                    .forEach(properties::remove);
-                        }
-                    }
-                    properties.putAll(localeProperties);
-                    classesWithFiles.add(clazz);
-                }
+                collectHierarchy(parent, hierarchy);
             }
         }
     }
@@ -190,37 +190,36 @@ public final class Hermes {
     }
 
     /**
-     * Get the properties file associated with the given interface and locale
-     * as an InputStream. Use the return value in an InputStream reader to load
-     * the properties file data into a Properties object.
-     *
-     * @param clazz  The Class representing one of the i18n interface.
-     * @param locale The locale to get the properties for.
-     * @return Returns an InputStream of the file data suitable for loading
-     * into a Properties object or null if no properties file for the file
-     * path is found.
+     * Loads the properties file for the given interface and locale, or
+     * returns null if there is none. Like GWT, a nested interface's file may
+     * be named Outer$Inner or Outer_Inner.
      */
-    private static <T> InputStream getPropertiesFile(Class<T> clazz, ULocale locale) {
-        return clazz.getResourceAsStream(getPropertiesFilename(clazz, locale));
-    }
-
-    private static <T> String getPropertiesFilename(Class<T> clazz, ULocale locale) {
-        String localeStr = "";
-        if (locale != null) {
-            localeStr = '_' + locale.getName();
+    private static Resource loadPropertiesFile(Class<?> clazz, GwtLocale locale) throws IOException {
+        String suffix = locale.isDefault() ? "" : LOCALE_SEPARATOR + locale.getAsString();
+        String classname = getPropertiesClassname(clazz);
+        InputStream is = clazz.getResourceAsStream(classname + suffix + PROPERTIES_EXT);
+        if (is == null && classname.indexOf('$') >= 0) {
+            is = clazz.getResourceAsStream(classname.replace('$', LOCALE_SEPARATOR) + suffix + PROPERTIES_EXT);
         }
-        return getPropertiesClassname(clazz) + localeStr + PROPERTIES_EXT;
+        if (is == null) {
+            return null;
+        }
+        try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            Properties properties = new Properties();
+            properties.load(reader);
+            Map<String, String> values = new LinkedHashMap<>();
+            for (String name : properties.stringPropertyNames()) {
+                values.put(name, properties.getProperty(name));
+            }
+            return new Resource(values);
+        }
     }
 
     // Return class name without package prefix
     // Works for nested classes where getSimpleName() doesn't
     private static <T> String getPropertiesClassname(Class<T> clazz) {
         String classname = clazz.getName();
-        int lastDot = classname.lastIndexOf(DOT);
-        if (lastDot >= 0 && lastDot < classname.length() + 1) {
-            classname = classname.substring(classname.lastIndexOf(DOT) + 1);
-        }
-        return classname;
+        return classname.substring(classname.lastIndexOf(DOT) + 1);
     }
 
     private static boolean isValidSubclass(Class<?> clazz) {
@@ -229,7 +228,7 @@ public final class Hermes {
 
     @FunctionalInterface
     private interface ProxyFactory {
-        AbstractI18nProxy create(Class<?> clazz, ULocale locale, Properties props);
+        AbstractI18nProxy create(Class<?> clazz, ULocale locale, ResourceList resources);
     }
 
     private enum I18nType {
@@ -249,8 +248,12 @@ public final class Hermes {
             this.defaultAnnotations = defaultAnnotations;
         }
 
-        AbstractI18nProxy create(Class<?> clazz, ULocale locale, Properties properties) {
-            return factory.create(clazz, locale, properties);
+        AbstractI18nProxy create(Class<?> clazz, ULocale locale, ResourceList resources) {
+            return factory.create(clazz, locale, resources);
+        }
+
+        boolean isConstants() {
+            return this != MESSAGES;
         }
 
         boolean hasDefaultsForAllMethods(Class<?> clazz) {

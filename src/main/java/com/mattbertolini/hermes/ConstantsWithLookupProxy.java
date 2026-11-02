@@ -23,13 +23,13 @@ import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.ibm.icu.util.ULocale;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.MissingResourceException;
-import java.util.Properties;
 
 public class ConstantsWithLookupProxy extends ConstantsProxy {
 
-    public ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, Properties properties) {
-        super(clazz, locale, properties);
+    ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
+        super(clazz, locale, resources);
     }
 
     @Override
@@ -50,14 +50,20 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
             throw new MissingResourceException("Property " + name + " is not of type "
                     + lookupMethod.getReturnType().getSimpleName() + ".", getI18nClass().getName(), name);
         }
-        return handlerFor(findConstantMethod(name)).handle(null);
+        return handlerFor(constantMethod).handle(null);
     }
 
     private Method findConstantMethod(String name) {
+        Method method;
         try {
-            return getI18nClass().getMethod(name);
+            method = getI18nClass().getMethod(name);
         } catch (NoSuchMethodException e) {
             throw new MissingResourceException("No property with given name found.", getI18nClass().getName(), name);
         }
+        // Default and static methods have bodies, not property values
+        if (!Modifier.isAbstract(method.getModifiers())) {
+            throw new MissingResourceException("Method " + name + " is not a constant.", getI18nClass().getName(), name);
+        }
+        return method;
     }
 }

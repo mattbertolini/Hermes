@@ -4,13 +4,41 @@ Hermes Change Log
 Version 2.0.0 -- TBD
 -------------------------------------------------------------------------------
 
-* Major version upgrade
+* Major version upgrade with potentially breaking changes
 * Java 8 minimum required
+* Requires ICU4J 74.2 (was 4.6).
 * Large refactoring of proxy internals
 * Number/date formatting and plural rules now always use the requested locale.
   Previously, if no properties file existed for the requested locale, they
   used the locale of the fallback file, or the JVM default locale when falling
   back to the default properties file.
+* Constants methods must return a type GWT supports (String, int, float,
+  double, boolean, String[] or Map). Other return types now throw an
+  IllegalArgumentException; previously they returned the raw string value.
+* Properties files, annotations and alternate forms are resolved exactly as GWT
+  does:
+  - Locales are searched in GWT's order, including script, region and alias
+    fallbacks (zh_TW uses zh_Hant, es_MX uses es_419, iw and he are aliases).
+    Private-use variants use GWT's file names (e.g. Foo_en_US_X-PRIV).
+  - A message's alternate forms come only from the file or annotations that
+    define its base message, so annotation forms no longer leak into a
+    translated locale.
+  - With several @PluralCount/@Select parameters, each selector commits to its
+    best form in turn, as GWT's generated code does.
+  - A child interface's annotations take precedence over a parent's default
+    properties file, and @DefaultLocale is honored.
+  - @GenerateKeys (MD5, method name and fully qualified method name
+    generators) is supported.
+  - Localized custom PluralRule classes are found along the full locale search
+    list (Rule_pt_PT before Rule_pt).
+* String[] and Map constants are parsed like GWT: escaped commas, trimming,
+  map[key]=value entries, declaration order, and a MissingResourceException for
+  missing map values. Map constants are now unmodifiable.
+* Messages support GWT's {0,list} and {0,localdatetime,skeleton} formats.
+* Message signatures GWT rejects now throw IllegalArgumentException: float or
+  double @Select (previously a Hermes extension), boxed @PluralCount, a
+  parameter with both @PluralCount and @Select, and SafeHtml arguments on
+  methods that don't return SafeHtml.
 *
 
 Version 1.2.0 -- 2011-05-12

@@ -31,27 +31,24 @@ import com.ibm.icu.util.ULocale;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.MissingResourceException;
-import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class ConstantsProxy extends AbstractI18nProxy {
 
-    public ConstantsProxy(Class<?> clazz, ULocale locale, Properties properties) {
-        super(clazz, locale, properties);
+    ConstantsProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
+        super(clazz, locale, resources);
     }
 
     @Override
     protected MethodHandler createHandler(Method method) {
         ConstantType constantType = ConstantType.forReturnType(method.getReturnType());
-        Object value = Optional.ofNullable(getProperties().getProperty(keyFor(method)))
-                .map(constantValue -> constantType.parse(constantValue, getProperties()))
-                .orElseGet(() -> constantType.defaultValue(method));
+        Object value = constantType.parse(keyFor(method), this);
         return args -> constantType.copy(value);
     }
 
@@ -61,60 +58,61 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Splits a String[] constant or a Map constant's key list exactly as GWT's
+     * ConstantsStringArrayMethodCreator.split does: on unescaped commas, with
+     * {@code \,} as a literal comma, trimming each item and keeping trailing
+     * empty items.
+     */
+    static String[] split(String target) {
+        // An artificial end character keeps split() from dropping a trailing empty item
+        String[] items = (target + "~").split("(?<![\\\\]),");
+        int last = items.length - 1;
+        items[last] = items[last].substring(0, items[last].length() - 1);
+        for (int i = 0; i < items.length; i++) {
+            items[i] = items[i].replaceAll("\\\\,", ",").trim();
+        }
+        return items;
+    }
+
+    private String requiredString(String key) {
+        String value = getResources().getString(key);
+        if (value == null) {
+            throw new MissingResourceException("No property value or default annotation found for key " + key,
+                    getI18nClass().getName(), key);
+        }
+        return value;
+    }
+
     private enum ConstantType {
         INT(DefaultIntValue.class, int.class::equals) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultIntValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return Integer.valueOf(value);
+            Object parse(String key, ConstantsProxy proxy) {
+                return Integer.valueOf(proxy.requiredString(key));
             }
         },
         FLOAT(DefaultFloatValue.class, float.class::equals) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultFloatValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return Float.valueOf(value);
+            Object parse(String key, ConstantsProxy proxy) {
+                return Float.valueOf(proxy.requiredString(key));
             }
         },
         DOUBLE(DefaultDoubleValue.class, double.class::equals) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultDoubleValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return Double.valueOf(value);
+            Object parse(String key, ConstantsProxy proxy) {
+                return Double.valueOf(proxy.requiredString(key));
             }
         },
         BOOLEAN(DefaultBooleanValue.class, boolean.class::equals) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultBooleanValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return Boolean.valueOf(value);
+            Object parse(String key, ConstantsProxy proxy) {
+                return Boolean.valueOf(proxy.requiredString(key));
             }
         },
         STRING_ARRAY(DefaultStringArrayValue.class, type -> type.isArray() && type.getComponentType() == String.class) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultStringArrayValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return value.split(", *");
+            Object parse(String key, ConstantsProxy proxy) {
+                return split(proxy.requiredString(key));
             }
 
             @Override
@@ -123,37 +121,24 @@ public class ConstantsProxy extends AbstractI18nProxy {
             }
         },
         STRING_MAP(DefaultStringMapValue.class, Map.class::equals) {
+            // Like GWT's ConstantsMapMethodCreator: each value comes from "map[key]",
+            // falling back to a plain "key" entry, and the map keeps declaration order.
             @Override
-            Object defaultValue(Method method) {
-                String[] keysValues = annotation(method, DefaultStringMapValue.class).value();
-                Map<String, String> map = new HashMap<>();
-                for (int i = 0; i < keysValues.length; i += 2) {
-                    map.put(keysValues[i], keysValues[i + 1]);
+            Object parse(String key, ConstantsProxy proxy) {
+                Map<String, String> map = new LinkedHashMap<>();
+                for (String mapKey : split(proxy.requiredString(key))) {
+                    if (!mapKey.isEmpty()) {
+                        String value = proxy.getResources().getForm(key, mapKey);
+                        map.put(mapKey, value != null ? value : proxy.requiredString(mapKey));
+                    }
                 }
-                return map;
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return Arrays.stream(value.split(","))
-                        .map(String::trim)
-                        .collect(HashMap::new, (map, key) -> map.put(key, properties.getProperty(key)), HashMap::putAll);
-            }
-
-            @Override
-            Object copy(Object value) {
-                return new HashMap<>((Map<?, ?>) value);
+                return Collections.unmodifiableMap(map);
             }
         },
         STRING(DefaultStringValue.class, String.class::equals) {
             @Override
-            Object defaultValue(Method method) {
-                return annotation(method, DefaultStringValue.class).value();
-            }
-
-            @Override
-            Object parse(String value, Properties properties) {
-                return value;
+            Object parse(String key, ConstantsProxy proxy) {
+                return proxy.requiredString(key);
             }
         };
 
@@ -165,8 +150,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
             this.matcher = matcher;
         }
 
-        abstract Object parse(String value, Properties properties);
-        abstract Object defaultValue(Method method);
+        abstract Object parse(String key, ConstantsProxy proxy);
 
         Object copy(Object value) {
             return value;
@@ -177,14 +161,6 @@ public class ConstantsProxy extends AbstractI18nProxy {
                     .filter(constantType -> constantType.matcher.test(type))
                     .findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Unsupported Constants return type: " + type));
-        }
-
-        private static <A extends Annotation> A annotation(Method method, Class<A> annotationType) {
-            return Optional.ofNullable(method.getAnnotation(annotationType))
-                    .orElseThrow(() -> new MissingResourceException(
-                            "No property value or @" + annotationType.getSimpleName() + " found for " + method.getName(),
-                            method.getDeclaringClass().getName(),
-                            keyFor(method)));
         }
     }
 }

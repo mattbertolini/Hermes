@@ -125,10 +125,9 @@ public class ConstantsWithLookupProxyTest {
     }
 
     @Test
-    public void testLookupMapIsNotShared() {
-        this.testData.getMap("LookupMap").put("MapKey1", "Changed");
-        Assert.assertEquals("Map Value 1", this.testData.getMap("LookupMap").get("MapKey1"));
-        Assert.assertEquals("Map Value 1", this.testData.LookupMap().get("MapKey1"));
+    public void testLookupMapIsUnmodifiable() {
+        Assert.assertThrows(UnsupportedOperationException.class,
+                () -> this.testData.getMap("LookupMap").put("MapKey1", "Changed"));
     }
 
     @Test

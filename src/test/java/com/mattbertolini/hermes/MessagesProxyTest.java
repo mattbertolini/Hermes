@@ -19,14 +19,8 @@
 
 package com.mattbertolini.hermes;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Calendar;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TimeZone;
-
+import com.google.gwt.safehtml.shared.SafeHtml;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.ibm.icu.util.ULocale;
 import org.junit.After;
 import org.junit.Assert;
@@ -34,8 +28,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.gwt.safehtml.shared.SafeHtml;
-import com.google.gwt.safehtml.shared.SafeHtmlUtils;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
 
 public class MessagesProxyTest {
     private static final TimeZone TEST_TIME_ZONE = TimeZone.getTimeZone("America/New_York");
@@ -308,18 +307,11 @@ public class MessagesProxyTest {
     }
     
     @Test
-    public void testMessageWithFloatSelect() {
-        String fourPointTwoExpected = "This is the float 4.2 string.";
-        String fourPointTwoActual = this.testData.MessageWithFloatSelect(4.2f);
-        Assert.assertEquals(fourPointTwoExpected, fourPointTwoActual);
-        
-        String twelvePointFourExpected = "This is the float 12.4 string.";
-        String twelvePointFourActual = this.testData.MessageWithFloatSelect(12.4f);
-        Assert.assertEquals(twelvePointFourExpected, twelvePointFourActual);
-        
-        String defaultExpected = "This is the float default string.";
-        String defaultActual = this.testData.MessageWithFloatSelect(21.2f);
-        Assert.assertEquals(defaultExpected, defaultActual);
+    public void testMessageWithFloatSelectIsRejected() {
+        // GWT only allows integral primitives, boolean, enums, or String
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> this.testData.MessageWithFloatSelect(4.2f));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("float"));
     }
     
     @Test
@@ -338,18 +330,10 @@ public class MessagesProxyTest {
     }
     
     @Test
-    public void testMessageWithDoubleSelect() {
-        String fourPointTwoExpected = "This is the double 4.2 string.";
-        String fourPointTwoActual = this.testData.MessageWithDoubleSelect(4.2d);
-        Assert.assertEquals(fourPointTwoExpected, fourPointTwoActual);
-        
-        String twelvePointFourExpected = "This is the double 12.4 string.";
-        String twelvePointFourActual = this.testData.MessageWithDoubleSelect(12.4d);
-        Assert.assertEquals(twelvePointFourExpected, twelvePointFourActual);
-        
-        String defaultExpected = "This is the double default string.";
-        String defaultActual = this.testData.MessageWithDoubleSelect(21.2d);
-        Assert.assertEquals(defaultExpected, defaultActual);
+    public void testMessageWithDoubleSelectIsRejected() {
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> this.testData.MessageWithDoubleSelect(4.2d));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("double"));
     }
     
     @Test

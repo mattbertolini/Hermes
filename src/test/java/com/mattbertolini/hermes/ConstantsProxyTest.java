@@ -181,17 +181,18 @@ public class ConstantsProxyTest {
     }
     
     @Test
-    public void testMapConstantIsNotShared() {
-        this.testData.MapConstant().put("MapKey1", "Changed");
-        Assert.assertEquals("Map Value 1", this.testData.MapConstant().get("MapKey1"));
+    public void testMapConstantIsUnmodifiable() {
+        // Like GWT, which returns Collections.unmodifiableMap
+        Assert.assertThrows(UnsupportedOperationException.class,
+                () -> this.testData.MapConstant().put("MapKey1", "Changed"));
     }
 
     @Test
-    public void testMapConstantKeepsMissingKeysAsNull() {
-        Map<String, String> actual = this.testData.MapConstantWithMissingKey();
-        Assert.assertEquals("Map Value 1", actual.get("MapKey1"));
-        Assert.assertTrue(actual.containsKey("NoSuchKey"));
-        Assert.assertNull(actual.get("NoSuchKey"));
+    public void testMapConstantWithMissingKeyThrowsMissingResource() {
+        // GWT fails when a listed map key has no value
+        MissingResourceException e = Assert.assertThrows(MissingResourceException.class,
+                () -> this.testData.MapConstantWithMissingKey());
+        Assert.assertEquals("NoSuchKey", e.getKey());
     }
 
     @Test
