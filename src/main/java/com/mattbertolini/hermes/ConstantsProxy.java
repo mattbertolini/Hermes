@@ -19,25 +19,15 @@
 
 package com.mattbertolini.hermes;
 
-import com.google.gwt.i18n.client.Constants.DefaultBooleanValue;
-import com.google.gwt.i18n.client.Constants.DefaultDoubleValue;
-import com.google.gwt.i18n.client.Constants.DefaultFloatValue;
-import com.google.gwt.i18n.client.Constants.DefaultIntValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringArrayValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringMapValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringValue;
 import com.ibm.icu.util.ULocale;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.MissingResourceException;
-import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class ConstantsProxy extends AbstractI18nProxy {
 
@@ -50,12 +40,6 @@ public class ConstantsProxy extends AbstractI18nProxy {
         ConstantType constantType = ConstantType.forReturnType(method.getReturnType());
         Object value = constantType.parse(keyFor(method), this);
         return args -> constantType.copy(value);
-    }
-
-    static Set<Class<? extends Annotation>> defaultAnnotations() {
-        return Arrays.stream(ConstantType.values())
-                .map(constantType -> constantType.defaultAnnotation)
-                .collect(Collectors.toSet());
     }
 
     /**
@@ -85,31 +69,31 @@ public class ConstantsProxy extends AbstractI18nProxy {
     }
 
     private enum ConstantType {
-        INT(DefaultIntValue.class, int.class::equals) {
+        INT(int.class::equals) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return Integer.valueOf(proxy.requiredString(key));
             }
         },
-        FLOAT(DefaultFloatValue.class, float.class::equals) {
+        FLOAT(float.class::equals) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return Float.valueOf(proxy.requiredString(key));
             }
         },
-        DOUBLE(DefaultDoubleValue.class, double.class::equals) {
+        DOUBLE(double.class::equals) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return Double.valueOf(proxy.requiredString(key));
             }
         },
-        BOOLEAN(DefaultBooleanValue.class, boolean.class::equals) {
+        BOOLEAN(boolean.class::equals) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return Boolean.valueOf(proxy.requiredString(key));
             }
         },
-        STRING_ARRAY(DefaultStringArrayValue.class, type -> type.isArray() && type.getComponentType() == String.class) {
+        STRING_ARRAY(type -> type.isArray() && type.getComponentType() == String.class) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return split(proxy.requiredString(key));
@@ -120,7 +104,7 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return ((String[]) value).clone();
             }
         },
-        STRING_MAP(DefaultStringMapValue.class, Map.class::equals) {
+        STRING_MAP(Map.class::equals) {
             // Like GWT's ConstantsMapMethodCreator: each value comes from "map[key]",
             // falling back to a plain "key" entry, and the map keeps declaration order.
             @Override
@@ -135,18 +119,16 @@ public class ConstantsProxy extends AbstractI18nProxy {
                 return Collections.unmodifiableMap(map);
             }
         },
-        STRING(DefaultStringValue.class, String.class::equals) {
+        STRING(String.class::equals) {
             @Override
             Object parse(String key, ConstantsProxy proxy) {
                 return proxy.requiredString(key);
             }
         };
 
-        private final Class<? extends Annotation> defaultAnnotation;
         private final Predicate<Class<?>> matcher;
 
-        ConstantType(Class<? extends Annotation> defaultAnnotation, Predicate<Class<?>> matcher) {
-            this.defaultAnnotation = defaultAnnotation;
+        ConstantType(Predicate<Class<?>> matcher) {
             this.matcher = matcher;
         }
 

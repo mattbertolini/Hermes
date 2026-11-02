@@ -27,6 +27,8 @@ Version 2.0.0 -- TBD
     best form in turn, as GWT's generated code does.
   - A child interface's annotations take precedence over a parent's default
     properties file, and @DefaultLocale is honored.
+  - An interface without its own properties file is accepted when all of its
+    keys resolve elsewhere, such as in a child interface's file.
   - @GenerateKeys (MD5, method name and fully qualified method name
     generators) is supported.
   - Localized custom PluralRule classes are found along the full locale search

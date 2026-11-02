@@ -22,7 +22,6 @@ package com.mattbertolini.hermes;
 import com.google.gwt.i18n.client.Constants;
 import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.google.gwt.i18n.client.Messages;
-import com.google.gwt.i18n.client.Messages.DefaultMessage;
 import com.google.gwt.i18n.shared.GwtLocale;
 import com.ibm.icu.util.ULocale;
 
@@ -30,7 +29,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -38,7 +36,6 @@ import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -158,12 +155,13 @@ public final class Hermes {
                 }
             }
         }
+        ResourceList resourceList = new ResourceList(resources);
         for (Class<?> current : hierarchy) {
             if (!classesWithFiles.contains(current)) {
-                checkPropertyFileNeeded(current);
+                checkPropertyFileNeeded(clazz, current, resourceList);
             }
         }
-        return new ResourceList(resources);
+        return resourceList;
     }
 
     // Depth-first, child before parents, each interface once - GWT's walkInheritanceTree
@@ -178,14 +176,20 @@ public final class Hermes {
         }
     }
 
-    // If a property file has not been provided, check all properties have valid annotations
-    private static void checkPropertyFileNeeded(Class<?> clazz) throws FileNotFoundException {
-        boolean allMethodsHaveDefaults = I18nType.of(clazz)
-                .map(type -> type.hasDefaultsForAllMethods(clazz))
-                .orElse(false);
-        if (!allMethodsHaveDefaults) {
-            // No annotation found for a property - we are missing a property file
-            throw new FileNotFoundException("Could not find any properties files matching the class: " + clazz.getName());
+    /**
+     * An interface without a properties file is fine as long as every one of
+     * its methods resolves somewhere: in its annotations, or (as GWT allows)
+     * in another interface's file or annotations, such as a child's.
+     */
+    private static void checkPropertyFileNeeded(Class<?> requested, Class<?> clazz, ResourceList resources)
+            throws FileNotFoundException {
+        for (Method method : clazz.getDeclaredMethods()) {
+            // Default and static interface methods have bodies, so need no message
+            if (Modifier.isAbstract(method.getModifiers())
+                    && resources.getString(Keys.keyFor(requested, method)) == null) {
+                throw new FileNotFoundException("Could not find any properties files matching the class: "
+                        + clazz.getName());
+            }
         }
     }
 
@@ -233,19 +237,16 @@ public final class Hermes {
 
     private enum I18nType {
         // Order matters. Most specific first
-        CONSTANTS_WITH_LOOKUP(ConstantsWithLookup.class, ConstantsWithLookupProxy::new, ConstantsProxy.defaultAnnotations()),
-        CONSTANTS(Constants.class, ConstantsProxy::new, ConstantsProxy.defaultAnnotations()),
-        // Like GWT, only @DefaultMessage supplies a message; @AlternateMessage alone has no "other" form.
-        MESSAGES(Messages.class, MessagesProxy::new, Collections.singleton(DefaultMessage.class));
+        CONSTANTS_WITH_LOOKUP(ConstantsWithLookup.class, ConstantsWithLookupProxy::new),
+        CONSTANTS(Constants.class, ConstantsProxy::new),
+        MESSAGES(Messages.class, MessagesProxy::new);
 
         private final Class<?> rootInterface;
         private final ProxyFactory factory;
-        private final Set<Class<? extends Annotation>> defaultAnnotations;
 
-        I18nType(Class<?> rootInterface, ProxyFactory factory, Set<Class<? extends Annotation>> defaultAnnotations) {
+        I18nType(Class<?> rootInterface, ProxyFactory factory) {
             this.rootInterface = rootInterface;
             this.factory = factory;
-            this.defaultAnnotations = defaultAnnotations;
         }
 
         AbstractI18nProxy create(Class<?> clazz, ULocale locale, ResourceList resources) {
@@ -254,19 +255,6 @@ public final class Hermes {
 
         boolean isConstants() {
             return this != MESSAGES;
-        }
-
-        boolean hasDefaultsForAllMethods(Class<?> clazz) {
-            // Default and static interface methods have bodies, so need no message
-            return Arrays.stream(clazz.getDeclaredMethods())
-                    .filter(method -> Modifier.isAbstract(method.getModifiers()))
-                    .allMatch(this::hasDefault);
-        }
-
-        private boolean hasDefault(Method method) {
-            return Arrays.stream(method.getDeclaredAnnotations())
-                    .map(Annotation::annotationType)
-                    .anyMatch(defaultAnnotations::contains);
         }
 
         static Optional<I18nType> of(Class<?> clazz) {

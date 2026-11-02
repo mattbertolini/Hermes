@@ -29,6 +29,7 @@ import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -140,6 +141,67 @@ public class GwtCompatibilityTest {
 
         @DefaultMessage("{0}")
         String pluralAndSelect(@PluralCount @Select int count);
+
+        @DefaultMessage("{0}")
+        @AlternateMessage({"one|MALE", "One male"})
+        String wrongSelectorCount(@PluralCount int count);
+    }
+
+    public interface SelectMatchingMessages extends Messages {
+        @DefaultMessage("other")
+        @AlternateMessage({"true", "yes", "false", "no"})
+        String bool(@Select boolean value);
+
+        // GWT compares a char against the form as an integral value
+        @DefaultMessage("other")
+        @AlternateMessage({"65", "letter A"})
+        String character(@Select char value);
+
+        @DefaultMessage("other")
+        @AlternateMessage({"=red", "is red", "blue", "is blue"})
+        String color(@Select String value);
+
+        @DefaultMessage("other")
+        @AlternateMessage({"=MALE", "male"})
+        String gender(@Select Gender value);
+    }
+
+    @SuppressWarnings("deprecation") // PluralText is deprecated, but GWT still supports it
+    public interface PluralTextMessages extends Messages {
+        @DefaultMessage("{0} items")
+        @PluralText({"one", "One item"})
+        String items(@PluralCount int count);
+    }
+
+    // Its properties file is named GwtCompatibilityTest_UnderscoreFileMessages
+    public interface UnderscoreFileMessages extends Messages {
+        String message();
+    }
+
+    @GenerateKeys("com.example.NoSuchKeyGenerator")
+    public interface UnknownKeyGeneratorMessages extends Messages {
+        @DefaultMessage("Hello")
+        String hello();
+    }
+
+    public interface OddAlternateMessages extends Messages {
+        @DefaultMessage("{0}")
+        @AlternateMessage({"one"})
+        String odd(@PluralCount int count);
+    }
+
+    // No properties file and no annotation: its key comes from the child's file
+    public interface KeyFromChildParent extends Messages {
+        String title();
+    }
+
+    public interface KeyFromChildChild extends KeyFromChildParent {
+        String subtitle();
+    }
+
+    public interface OddMapConstants extends Constants {
+        @DefaultStringMapValue({"key"})
+        Map<String, String> odd();
     }
 
     public static class RegionalPluralRule implements PluralRule {
@@ -249,6 +311,8 @@ public class GwtCompatibilityTest {
         Assert.assertEquals("Date: Mar 15, 2026", messages.date(calendar.getTime()));
     }
 
+    // The keys in the fr file are uppercase hex MD5 of the text (plus the
+    // meaning), matching GWT's MD5KeyGenerator and StringUtils.toHexString.
     @Test
     public void testMd5GeneratedKeys() throws IOException {
         Md5Messages messages = Hermes.get(Md5Messages.class, "fr");
@@ -300,5 +364,83 @@ public class GwtCompatibilityTest {
     public void testPluralCountAndSelectOnSameParameterIsRejected() throws IOException {
         InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.pluralAndSelect(1));
+    }
+
+    @Test
+    public void testAlternateFormsWithWrongSelectorCountAreRejected() throws IOException {
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        Assert.assertThrows(IllegalArgumentException.class, () -> messages.wrongSelectorCount(1));
+    }
+
+    @Test
+    public void testBooleanSelect() throws IOException {
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        Assert.assertEquals("yes", messages.bool(true));
+        Assert.assertEquals("no", messages.bool(false));
+    }
+
+    @Test
+    public void testCharSelectMatchesIntegralValue() throws IOException {
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        Assert.assertEquals("letter A", messages.character('A'));
+        Assert.assertEquals("other", messages.character('B'));
+    }
+
+    @Test
+    public void testStringSelectTreatsExactPrefixAsValue() throws IOException {
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        Assert.assertEquals("is red", messages.color("red"));
+        Assert.assertEquals("is blue", messages.color("blue"));
+        Assert.assertEquals("other", messages.color("green"));
+        Assert.assertEquals("other", messages.color(null));
+    }
+
+    @Test
+    public void testEnumSelectTreatsExactPrefixAsValue() throws IOException {
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        Assert.assertEquals("male", messages.gender(Gender.MALE));
+        Assert.assertEquals("other", messages.gender(Gender.FEMALE));
+        Assert.assertEquals("other", messages.gender(null));
+    }
+
+    @Test
+    public void testPluralTextAlternateForms() throws IOException {
+        PluralTextMessages messages = Hermes.get(PluralTextMessages.class, "en");
+        Assert.assertEquals("One item", messages.items(1));
+        Assert.assertEquals("2 items", messages.items(2));
+    }
+
+    @Test
+    public void testNestedInterfaceLoadsUnderscoreNamedPropertiesFile() throws IOException {
+        Assert.assertEquals("from underscore file", Hermes.get(UnderscoreFileMessages.class, null).message());
+    }
+
+    @Test
+    public void testUnknownKeyGeneratorIsRejected() {
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> Hermes.get(UnknownKeyGeneratorMessages.class, null));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("com.example.NoSuchKeyGenerator"));
+    }
+
+    @Test
+    public void testOddLengthAlternateMessageIsRejected() {
+        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddAlternateMessages.class, null));
+    }
+
+    @Test
+    public void testOddLengthDefaultStringMapValueIsRejected() {
+        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddMapConstants.class, null));
+    }
+
+    @Test
+    public void testParentKeyMayComeFromChildPropertiesFile() throws IOException {
+        KeyFromChildChild messages = Hermes.get(KeyFromChildChild.class, null);
+        Assert.assertEquals("Hello", messages.title());
+        Assert.assertEquals("Sub", messages.subtitle());
+    }
+
+    @Test
+    public void testInterfaceWhoseKeysResolveNowhereStillFails() {
+        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(KeyFromChildParent.class, null));
     }
 }

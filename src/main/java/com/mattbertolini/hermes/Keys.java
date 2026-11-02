@@ -49,6 +49,7 @@ import java.util.stream.IntStream;
  * (method name when absent).
  */
 final class Keys {
+    // Uppercase, as GWT's StringUtils.toHexString encodes MD5 keys
     private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
     private static final Map<String, Function<Method, String>> GENERATORS = new HashMap<>();
 

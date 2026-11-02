@@ -65,6 +65,15 @@ public class MessagesProxy extends AbstractI18nProxy {
     private static final String OTHER = GwtPlural.OTHER.getGwtValue();
     private static final String EXACT_PREFIX = "=";
     private static final String SEPARATOR = "|";
+    // Localized rule class per base rule class and locale name, so the class
+    // search (and its ClassNotFoundExceptions) runs once, not per method
+    private static final ClassValue<Map<String, Class<? extends PluralRule>>> LOCALIZED_RULES =
+            new ClassValue<Map<String, Class<? extends PluralRule>>>() {
+                @Override
+                protected Map<String, Class<? extends PluralRule>> computeValue(Class<?> type) {
+                    return new ConcurrentHashMap<>();
+                }
+            };
     
     private final PluralRules pluralRules;
     
@@ -326,7 +335,13 @@ public class MessagesProxy extends AbstractI18nProxy {
     }
 
     private Class<? extends PluralRule> localizedPluralRuleClass(Class<? extends PluralRule> clazz) {
-        for (GwtLocale search : GwtLocales.searchList(GwtLocales.fromString(this.getLocale().getName()))) {
+        return LOCALIZED_RULES.get(clazz).computeIfAbsent(this.getLocale().getName(),
+                localeName -> findLocalizedPluralRuleClass(clazz, localeName));
+    }
+
+    private static Class<? extends PluralRule> findLocalizedPluralRuleClass(Class<? extends PluralRule> clazz,
+                                                                            String localeName) {
+        for (GwtLocale search : GwtLocales.searchList(GwtLocales.fromString(localeName))) {
             if (search.isDefault()) {
                 break;
             }
@@ -349,12 +364,10 @@ public class MessagesProxy extends AbstractI18nProxy {
     private static final class CompiledMessage {
         private final MessageFormat format;
         private final List<ListArgument> lists = new ArrayList<>();
-        private final ListFormatter listFormatter;
         private final ULocale locale;
 
         CompiledMessage(String pattern, ULocale locale, int parameterCount) {
             this.locale = locale;
-            this.listFormatter = ListFormatter.getInstance(locale);
             this.format = new MessageFormat("", locale);
             // GWT, like java.text.MessageFormat, treats every single quote as quoting
             this.format.applyPattern(rewrite(pattern, parameterCount), MessagePattern.ApostropheMode.DOUBLE_REQUIRED);
@@ -436,12 +449,14 @@ public class MessagesProxy extends AbstractI18nProxy {
             return -1;
         }
 
-        private final class ListArgument {
+        private static final class ListArgument {
             private final int index;
             private final MessageFormat elementFormat;
+            private final ListFormatter listFormatter;   // Only built for patterns that have a list
 
             ListArgument(int index, String elementStyle, ULocale locale) {
                 this.index = index;
+                this.listFormatter = ListFormatter.getInstance(locale);
                 this.elementFormat = new MessageFormat("", locale);
                 this.elementFormat.applyPattern(elementStyle == null ? "{0}" : "{0," + elementStyle + "}",
                         MessagePattern.ApostropheMode.DOUBLE_REQUIRED);
