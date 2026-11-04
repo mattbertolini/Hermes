@@ -6,6 +6,7 @@ Version 2.0.0 -- TBD
 
 * Major version upgrade with potentially breaking changes
 * Java 8 minimum required
+* Built with Maven (./mvnw) instead of Ant and Ivy
 * Requires ICU4J 74.2 (was 4.6).
 * Large refactoring of proxy internals. The proxy and plural classes moved
   out of com.mattbertolini.hermes; update imports:

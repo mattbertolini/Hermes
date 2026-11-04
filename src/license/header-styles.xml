@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XML header layout used by this project: two-space indent, empty blank lines -->
+<additionalHeaders>
+    <xml_indented>
+        <firstLine><![CDATA[<!--]]></firstLine>
+        <beforeEachLine>  </beforeEachLine>
+        <endLine><![CDATA[-->]]></endLine>
+        <skipLine><![CDATA[^<\?xml.*>$]]></skipLine>
+        <firstLineDetectionPattern><![CDATA[(\s|\t)*<!--.*$]]></firstLineDetectionPattern>
+        <lastLineDetectionPattern><![CDATA[.*-->(\s|\t)*$]]></lastLineDetectionPattern>
+        <allowBlankLines>false</allowBlankLines>
+        <isMultiline>true</isMultiline>
+        <padLines>false</padLines>
+    </xml_indented>
+</additionalHeaders>
