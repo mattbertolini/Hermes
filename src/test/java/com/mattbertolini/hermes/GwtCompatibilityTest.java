@@ -27,6 +27,7 @@ import com.google.gwt.i18n.client.PluralRule;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -42,6 +43,11 @@ import java.util.Map;
  * Behavior that must match GWT's own i18n code generation.
  */
 public class GwtCompatibilityTest {
+    private static final String TEST_TIME_ZONE = "America/New_York";
+
+    // Dates are built and formatted in the same zone, whatever the machine's zone
+    @Rule
+    public final DefaultTimeZoneRule defaultTimeZone = new DefaultTimeZoneRule(TEST_TIME_ZONE);
 
     public enum Gender { MALE, FEMALE }
 
@@ -350,7 +356,7 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testLocalDateTimeFormat() throws IOException {
-        Calendar calendar = Calendar.getInstance();
+        Calendar calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone(TEST_TIME_ZONE));
         calendar.clear();
         calendar.set(2026, Calendar.MARCH, 15, 12, 0);
         FormatMessages messages = Hermes.get(FormatMessages.class, "en");
@@ -513,7 +519,7 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testPredefinedLocalDateTimeFormats() throws IOException {
-        Calendar calendar = Calendar.getInstance();
+        Calendar calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone(TEST_TIME_ZONE));
         calendar.clear();
         calendar.set(2026, Calendar.MARCH, 15, 12, 0);
         FormatMessages messages = Hermes.get(FormatMessages.class, "en");

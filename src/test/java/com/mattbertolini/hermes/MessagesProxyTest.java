@@ -21,10 +21,10 @@ package com.mattbertolini.hermes;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.ibm.icu.util.ULocale;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -37,9 +37,11 @@ import java.util.TimeZone;
 
 public class MessagesProxyTest {
     private static final TimeZone TEST_TIME_ZONE = TimeZone.getTimeZone("America/New_York");
-    
+
+    @Rule
+    public final DefaultTimeZoneRule defaultTimeZone = new DefaultTimeZoneRule(TEST_TIME_ZONE.getID());
+
     private MessagesProxyTestData testData;
-    private TimeZone originalTimeZone;
 
     @BeforeClass
     public static void beforeClass() {
@@ -50,13 +52,6 @@ public class MessagesProxyTest {
     @Before
     public void setUp() throws Exception {
         this.testData = Hermes.get(MessagesProxyTestData.class, "en_US");
-        this.originalTimeZone = TimeZone.getDefault();
-        TimeZone.setDefault(TEST_TIME_ZONE);
-    }
-
-    @After
-    public void tearDown() {
-        TimeZone.setDefault(this.originalTimeZone);
     }
     
     @Test
