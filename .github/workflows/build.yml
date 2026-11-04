@@ -1,0 +1,63 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and test (JDK ${{ matrix.java }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # The next JDK is an early-access build, so its failures are reported but don't fail the workflow
+    continue-on-error: ${{ matrix.java == 'next' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        java: ['8', '11', '17', '21', '25', 'next']
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ matrix.java }}
+        if: matrix.java != 'next'
+        uses: actions/setup-java@v5
+        with:
+          # Temurin has no JDK 8 for Apple Silicon macOS runners; Zulu does
+          distribution: ${{ matrix.java == '8' && runner.os == 'macOS' && 'zulu' || 'temurin' }}
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      - name: Set up the next JDK (early access)
+        if: matrix.java == 'next'
+        uses: oracle-actions/setup-java@v1
+        with:
+          website: jdk.java.net
+          release: EA
+
+      # The license header check runs in its own job
+      - name: Compile and test
+        run: ${{ runner.os == 'Windows' && '.\mvnw.cmd' || './mvnw' }} -B -ntp verify "-Dlicense.skip=true"
+
+  license:
+    name: License headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Check license headers
+        run: ./mvnw -B -ntp license:check
