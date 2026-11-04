@@ -48,7 +48,8 @@ Version 2.0.0 -- TBD
 * Message signatures GWT rejects now throw IllegalArgumentException: float or
   double @Select (previously a Hermes extension), boxed @PluralCount, a
   parameter with both @PluralCount and @Select, and SafeHtml arguments on
-  methods that don't return SafeHtml.
+  methods that don't return SafeHtml. A Constants method with more than one
+  @Default*Value annotation is also rejected, as in GWT.
 *
 
 Version 1.2.0 -- 2011-05-12

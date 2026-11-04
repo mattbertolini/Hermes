@@ -19,13 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import com.google.gwt.i18n.client.Constants.DefaultBooleanValue;
-import com.google.gwt.i18n.client.Constants.DefaultDoubleValue;
-import com.google.gwt.i18n.client.Constants.DefaultFloatValue;
-import com.google.gwt.i18n.client.Constants.DefaultIntValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringArrayValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringMapValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringValue;
 import com.google.gwt.i18n.client.LocalizableResource.DefaultLocale;
 import com.google.gwt.i18n.client.Messages.AlternateMessage;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
@@ -36,10 +29,8 @@ import com.mattbertolini.hermes.internal.util.Assert;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Builds the resource holding an interface's default-value annotations, as
@@ -107,38 +98,19 @@ final class AnnotationResources {
     // String arrays and map key lists are comma-joined with backslash escaping,
     // and map entries become plain keys, exactly as GWT encodes them.
     private static String constantText(Method method, Map<String, String> values) {
-        if (method.isAnnotationPresent(DefaultStringValue.class)) {
-            return method.getAnnotation(DefaultStringValue.class).value();
-        } else if (method.isAnnotationPresent(DefaultIntValue.class)) {
-            return Integer.toString(method.getAnnotation(DefaultIntValue.class).value());
-        } else if (method.isAnnotationPresent(DefaultFloatValue.class)) {
-            return Float.toString(method.getAnnotation(DefaultFloatValue.class).value());
-        } else if (method.isAnnotationPresent(DefaultDoubleValue.class)) {
-            return Double.toString(method.getAnnotation(DefaultDoubleValue.class).value());
-        } else if (method.isAnnotationPresent(DefaultBooleanValue.class)) {
-            return Boolean.toString(method.getAnnotation(DefaultBooleanValue.class).value());
-        } else if (method.isAnnotationPresent(DefaultStringArrayValue.class)) {
-            return Arrays.stream(method.getAnnotation(DefaultStringArrayValue.class).value())
-                    .map(AnnotationResources::escapeComma)
-                    .collect(Collectors.joining(","));
-        } else if (method.isAnnotationPresent(DefaultStringMapValue.class)) {
-            String[] keysValues = method.getAnnotation(DefaultStringMapValue.class).value();
-            requireEven(keysValues, method);
-            StringBuilder keys = new StringBuilder();
-            for (int i = 0; i < keysValues.length; i += 2) {
-                values.put(keysValues[i], keysValues[i + 1]);
-                keys.append(i == 0 ? "" : ",").append(escapeComma(keysValues[i]));
-            }
-            return keys.toString();
-        }
-        return null;
+        return DefaultValue.of(method)
+                .map(defaultValue -> {
+                    values.putAll(defaultValue.entries(method));
+                    return defaultValue.text(method, AnnotationResources::escapeComma);
+                })
+                .orElse(null);
     }
 
     private static String escapeComma(String value) {
         return value.replace("\\", "\\\\").replace(",", "\\,");
     }
 
-    private static void requireEven(String[] values, Method method) {
+    static void requireEven(String[] values, Method method) {
         Assert.argument(values.length % 2 == 0, "Odd number of strings supplied to an annotation on "
                 + method.getDeclaringClass().getName() + "." + method.getName()
                 + ": must be pairs of names and values");

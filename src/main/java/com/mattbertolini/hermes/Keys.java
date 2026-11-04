@@ -19,13 +19,6 @@
 
 package com.mattbertolini.hermes;
 
-import com.google.gwt.i18n.client.Constants.DefaultBooleanValue;
-import com.google.gwt.i18n.client.Constants.DefaultDoubleValue;
-import com.google.gwt.i18n.client.Constants.DefaultFloatValue;
-import com.google.gwt.i18n.client.Constants.DefaultIntValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringArrayValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringMapValue;
-import com.google.gwt.i18n.client.Constants.DefaultStringValue;
 import com.google.gwt.i18n.client.LocalizableResource.GenerateKeys;
 import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.google.gwt.i18n.client.LocalizableResource.Meaning;
@@ -40,8 +33,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Computes the properties key for a method the way GWT does: {@code @Key} if
@@ -140,38 +131,7 @@ final class Keys {
         if (message != null) {
             return message.value();
         }
-        DefaultStringMapValue map = method.getAnnotation(DefaultStringMapValue.class);
-        if (map != null) {
-            String[] keysValues = map.value();
-            return IntStream.range(0, keysValues.length / 2)
-                    .mapToObj(i -> quoteComma(keysValues[i * 2]))
-                    .collect(Collectors.joining(","));
-        }
-        DefaultStringValue string = method.getAnnotation(DefaultStringValue.class);
-        if (string != null) {
-            return string.value();
-        }
-        DefaultIntValue intValue = method.getAnnotation(DefaultIntValue.class);
-        if (intValue != null) {
-            return String.valueOf(intValue.value());
-        }
-        DefaultBooleanValue booleanValue = method.getAnnotation(DefaultBooleanValue.class);
-        if (booleanValue != null) {
-            return String.valueOf(booleanValue.value());
-        }
-        DefaultDoubleValue doubleValue = method.getAnnotation(DefaultDoubleValue.class);
-        if (doubleValue != null) {
-            return String.valueOf(doubleValue.value());
-        }
-        DefaultFloatValue floatValue = method.getAnnotation(DefaultFloatValue.class);
-        if (floatValue != null) {
-            return String.valueOf(floatValue.value());
-        }
-        DefaultStringArrayValue array = method.getAnnotation(DefaultStringArrayValue.class);
-        if (array != null) {
-            return Arrays.stream(array.value()).map(Keys::quoteComma).collect(Collectors.joining(","));
-        }
-        return null;
+        return DefaultValue.of(method).map(defaultValue -> defaultValue.text(method, Keys::quoteComma)).orElse(null);
     }
 
     private static String quoteComma(String value) {

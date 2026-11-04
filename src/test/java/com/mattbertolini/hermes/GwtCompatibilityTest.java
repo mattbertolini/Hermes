@@ -239,6 +239,12 @@ public class GwtCompatibilityTest {
         String title();
     }
 
+    public interface TwoDefaultsConstants extends Constants {
+        @DefaultStringValue("text")
+        @DefaultIntValue(1)
+        String twoDefaults();
+    }
+
     public interface OddMapConstants extends Constants {
         @DefaultStringMapValue({"key"})
         Map<String, String> odd();
@@ -546,5 +552,12 @@ public class GwtCompatibilityTest {
     @Test
     public void testUncomputableMd5KeyReportsMissingFile() {
         Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(Md5WithoutFileMessages.class, null));
+    }
+
+    @Test
+    public void testMoreThanOneDefaultValueAnnotationIsRejected() {
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> Hermes.get(TwoDefaultsConstants.class, null));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("No more than one"));
     }
 }
