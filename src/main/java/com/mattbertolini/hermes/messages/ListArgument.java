@@ -1,3 +1,22 @@
+/*
+ * Hermes - GWT Server-side I18N Library
+ * Copyright (C) 2011-2026  Matt Bertolini
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 package com.mattbertolini.hermes.messages;
 
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
@@ -14,7 +33,7 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 
-final class ListArgument {
+final class ListArgument implements ExtraArgument {
     private final int index;
     private final MessageFormat elementFormat;
     private final ListFormatter listFormatter;   // Only built for patterns that have a list
@@ -27,7 +46,8 @@ final class ListArgument {
                 MessagePattern.ApostropheMode.DOUBLE_REQUIRED);
     }
 
-    Object format(Object[] args, boolean safeHtml) {
+    @Override
+    public Object format(Object[] args, boolean safeHtml) {
         List<String> items = new ArrayList<>();
         for (Object element : elements(args[index])) {
             MessageFormat formatter = (MessageFormat) elementFormat.clone();

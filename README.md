@@ -27,8 +27,8 @@ support, use the 1.1.x line.
 
 * Hermes aims to behave exactly like GWT: properties files are searched in
   GWT's locale order (including script, region and alias fallbacks), and
-  annotations, @GenerateKeys, @DefaultLocale, alternate forms, {0,list} and
-  {0,localdatetime,skeleton} follow GWT's rules. Interfaces GWT would refuse to
+  annotations, @GenerateKeys, @DefaultLocale, alternate forms, {#}, {0,list}
+  and {0,localdatetime,...} follow GWT's rules. Interfaces GWT would refuse to
   compile are rejected with an IllegalArgumentException when the method is
   first called, rather than at compile time.
 

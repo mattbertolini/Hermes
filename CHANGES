@@ -7,7 +7,12 @@ Version 2.0.0 -- TBD
 * Major version upgrade with potentially breaking changes
 * Java 8 minimum required
 * Requires ICU4J 74.2 (was 4.6).
-* Large refactoring of proxy internals
+* Large refactoring of proxy internals. The proxy and plural classes moved
+  out of com.mattbertolini.hermes; update imports:
+  - MessagesProxy, GwtPlural, CustomPlural and Plural are now in
+    com.mattbertolini.hermes.messages
+  - ConstantsProxy and ConstantsWithLookupProxy are now in
+    com.mattbertolini.hermes.constants
 * Number/date formatting and plural rules now always use the requested locale.
   Previously, if no properties file existed for the requested locale, they
   used the locale of the fallback file, or the JVM default locale when falling
@@ -36,7 +41,10 @@ Version 2.0.0 -- TBD
 * String[] and Map constants are parsed like GWT: escaped commas, trimming,
   map[key]=value entries, declaration order, and a MissingResourceException for
   missing map values. Map constants are now unmodifiable.
-* Messages support GWT's {0,list} and {0,localdatetime,skeleton} formats.
+* Messages support GWT's {0,list}, {0,localdatetime,skeleton},
+  {0,localdatetime,predef:NAME} and inner-plural {#} formats. Like GWT, an
+  argument index beyond the method's parameters or an unterminated quote is an
+  IllegalArgumentException.
 * Message signatures GWT rejects now throw IllegalArgumentException: float or
   double @Select (previously a Hermes extension), boxed @PluralCount, a
   parameter with both @PluralCount and @Select, and SafeHtml arguments on

@@ -69,8 +69,23 @@ final class Keys {
 
     /**
      * @param targetClass the interface whose {@code @GenerateKeys} applies
+     * @throws IllegalArgumentException if the key generator can't compute a key
      */
     static String keyFor(Class<?> targetClass, Method method) {
+        String key = keyOrNull(targetClass, method);
+        if (key == null) {
+            throw new IllegalArgumentException("Key generator "
+                    + classAnnotation(targetClass, GenerateKeys.class).value()
+                    + " requires the default value be specified in an annotation for method " + method.getName());
+        }
+        return key;
+    }
+
+    /**
+     * Like {@link #keyFor}, but returns null when the key generator can't
+     * compute a key, as GWT's MD5KeyGenerator does without default text.
+     */
+    static String keyOrNull(Class<?> targetClass, Method method) {
         Key key = method.getAnnotation(Key.class);
         if (key != null) {
             return key.value();
@@ -99,8 +114,7 @@ final class Keys {
     private static String md5Key(Method method) {
         String text = defaultText(method);
         if (text == null) {
-            throw new IllegalArgumentException("MD5KeyGenerator requires the default value be specified in an "
-                    + "annotation for method " + method.getName());
+            return null;   // Cannot compute a key if no default text is supplied
         }
         MessageDigest md5;
         try {

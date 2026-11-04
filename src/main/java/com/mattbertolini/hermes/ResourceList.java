@@ -30,7 +30,7 @@ import java.util.List;
 public final class ResourceList {
     private final List<Resource> resources;
 
-    public ResourceList(List<Resource> resources) {
+    ResourceList(List<Resource> resources) {
         this.resources = new ArrayList<>(resources);
     }
 

@@ -26,6 +26,7 @@ import com.google.gwt.i18n.shared.GwtLocale;
 import com.ibm.icu.util.ULocale;
 import com.mattbertolini.hermes.constants.ConstantsProxy;
 import com.mattbertolini.hermes.constants.ConstantsWithLookupProxy;
+import com.mattbertolini.hermes.internal.locale.GwtLocales;
 import com.mattbertolini.hermes.messages.MessagesProxy;
 
 import java.io.FileNotFoundException;
@@ -189,11 +190,16 @@ public final class Hermes {
         for (Method method : clazz.getDeclaredMethods()) {
             // Default and static interface methods have bodies, so need no message
             if (Modifier.isAbstract(method.getModifiers())
-                    && resources.getString(Keys.keyFor(requested, method)) == null) {
+                    && !resolves(Keys.keyOrNull(requested, method), resources)) {
                 throw new FileNotFoundException("Could not find any properties files matching the class: "
                         + clazz.getName());
             }
         }
+    }
+
+    // A key the generator can't compute (MD5 without default text) resolves nowhere
+    private static boolean resolves(String key, ResourceList resources) {
+        return key != null && resources.getString(key) != null;
     }
 
     /**

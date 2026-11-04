@@ -88,6 +88,21 @@ public class GwtCompatibilityTest {
         @DefaultMessage("Date: {0,localdatetime,yMMMd}")
         String date(java.util.Date date);
 
+        @DefaultMessage("Date: {0,localdatetime,predef:DATE_SHORT}")
+        String predefShortDate(java.util.Date date);
+
+        @DefaultMessage("Date: {0,localdatetime,predef:YEAR_MONTH_ABBR_DAY}")
+        String predefSkeletonDate(java.util.Date date);
+
+        @DefaultMessage("{0,localdatetime,predef:ISO_8601}")
+        String predefIsoDate(java.util.Date date);
+
+        @DefaultMessage("{0,localdatetime,predef:NO_SUCH_FORMAT}")
+        String predefUnknown(java.util.Date date);
+
+        @DefaultMessage("{0,localdatetime}")
+        String localDateTimeWithoutSkeleton(java.util.Date date);
+
         @DefaultMessage("<b>{0,list}</b>")
         SafeHtml safeAttendees(List<String> names);
     }
@@ -138,6 +153,15 @@ public class GwtCompatibilityTest {
     public interface InvalidSignatureMessages extends Messages {
         @DefaultMessage("{0}")
         String safeHtmlArgument(SafeHtml html);
+
+        @DefaultMessage("Hello {1}")
+        String argumentOutOfRange(String name);
+
+        @DefaultMessage("Don't forget {0}")
+        String unterminatedQuote(String name);
+
+        @DefaultMessage("{#} items")
+        String innerPluralWithoutPluralCount(int count);
 
         @DefaultMessage("{0}")
         String pluralAndSelect(@PluralCount @Select int count);
@@ -197,6 +221,22 @@ public class GwtCompatibilityTest {
 
     public interface KeyFromChildChild extends KeyFromChildParent {
         String subtitle();
+    }
+
+    public interface InnerPluralMessages extends Messages {
+        @DefaultMessage("{#} items")
+        @AlternateMessage({"one", "One item ({#})"})
+        String items(@PluralCount int count);
+
+        @DefaultMessage("You and {#} others")
+        @AlternateMessage({"=0", "Just you", "one", "You and {#} other"})
+        String others(@PluralCount @Offset(1) int count);
+    }
+
+    // No properties file, and MD5 can't compute a key without default text
+    @GenerateKeys("com.google.gwt.i18n.rebind.keygen.MD5KeyGenerator")
+    public interface Md5WithoutFileMessages extends Messages {
+        String title();
     }
 
     public interface OddMapConstants extends Constants {
@@ -442,5 +482,69 @@ public class GwtCompatibilityTest {
     @Test
     public void testInterfaceWhoseKeysResolveNowhereStillFails() {
         Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(KeyFromChildParent.class, null));
+    }
+
+    @Test
+    public void testInnerPluralArgument() throws IOException {
+        InnerPluralMessages messages = Hermes.get(InnerPluralMessages.class, "en");
+        Assert.assertEquals("One item (1)", messages.items(1));
+        Assert.assertEquals("3 items", messages.items(3));
+    }
+
+    @Test
+    public void testInnerPluralArgumentAppliesOffset() throws IOException {
+        InnerPluralMessages messages = Hermes.get(InnerPluralMessages.class, "en");
+        Assert.assertEquals("Just you", messages.others(0));
+        Assert.assertEquals("You and 1 other", messages.others(2));
+        Assert.assertEquals("You and 4 others", messages.others(5));
+    }
+
+    @Test
+    public void testInnerPluralArgumentWithoutPluralCountIsRejected() throws IOException {
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        Assert.assertThrows(IllegalArgumentException.class, () -> messages.innerPluralWithoutPluralCount(1));
+    }
+
+    @Test
+    public void testPredefinedLocalDateTimeFormats() throws IOException {
+        Calendar calendar = Calendar.getInstance();
+        calendar.clear();
+        calendar.set(2026, Calendar.MARCH, 15, 12, 0);
+        FormatMessages messages = Hermes.get(FormatMessages.class, "en");
+        Assert.assertEquals("Date: 3/15/26", messages.predefShortDate(calendar.getTime()));
+        Assert.assertEquals("Date: Mar 15, 2026", messages.predefSkeletonDate(calendar.getTime()));
+        String iso = messages.predefIsoDate(calendar.getTime());
+        Assert.assertTrue(iso, iso.matches("2026-03-15T12:00:00\\.000([+-]\\d{2}:\\d{2}|Z)"));
+    }
+
+    @Test
+    public void testUnknownPredefinedFormatIsRejected() throws IOException {
+        FormatMessages messages = Hermes.get(FormatMessages.class, "en");
+        Assert.assertThrows(IllegalArgumentException.class, () -> messages.predefUnknown(new java.util.Date()));
+    }
+
+    @Test
+    public void testLocalDateTimeWithoutSkeletonIsRejected() throws IOException {
+        FormatMessages messages = Hermes.get(FormatMessages.class, "en");
+        IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
+                () -> messages.localDateTimeWithoutSkeleton(new java.util.Date()));
+        Assert.assertTrue(e.getMessage(), e.getMessage().contains("skeleton"));
+    }
+
+    @Test
+    public void testArgumentBeyondParametersIsRejected() throws IOException {
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        Assert.assertThrows(IllegalArgumentException.class, () -> messages.argumentOutOfRange("x"));
+    }
+
+    @Test
+    public void testUnterminatedQuoteIsRejected() throws IOException {
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        Assert.assertThrows(IllegalArgumentException.class, () -> messages.unterminatedQuote("x"));
+    }
+
+    @Test
+    public void testUncomputableMd5KeyReportsMissingFile() {
+        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(Md5WithoutFileMessages.class, null));
     }
 }

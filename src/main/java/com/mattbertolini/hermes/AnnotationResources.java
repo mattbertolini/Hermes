@@ -31,6 +31,7 @@ import com.google.gwt.i18n.client.Messages.AlternateMessage;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
 import com.google.gwt.i18n.client.Messages.PluralText;
 import com.google.gwt.i18n.shared.GwtLocale;
+import com.mattbertolini.hermes.internal.locale.GwtLocales;
 import com.mattbertolini.hermes.internal.util.Assert;
 
 import java.lang.reflect.Method;

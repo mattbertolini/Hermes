@@ -28,10 +28,10 @@ import com.google.gwt.safehtml.shared.SafeHtml;
 import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 import com.mattbertolini.hermes.AbstractI18nProxy;
-import com.mattbertolini.hermes.GwtLocales;
 import com.mattbertolini.hermes.MethodHandler;
 import com.mattbertolini.hermes.Resource;
 import com.mattbertolini.hermes.ResourceList;
+import com.mattbertolini.hermes.internal.locale.GwtLocales;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
@@ -101,6 +101,7 @@ public class MessagesProxy extends AbstractI18nProxy {
     private final class MessageHandler implements MethodHandler {
         private final String key;
         private final int parameterCount;
+        private final int innerPluralIndex;
         private final boolean safeHtml;
         private final List<AlternateFormSelector> selectors;
         private final List<ArgumentAdjuster> adjusters;
@@ -112,6 +113,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             validate(method);
             key = keyFor(method);
             parameterCount = method.getParameterCount();
+            innerPluralIndex = lastPluralCountIndex(method);
             safeHtml = method.getReturnType() == SafeHtml.class;
             selectors = buildSelectors(method);
             adjusters = buildAdjusters(method);
@@ -128,7 +130,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             String form = selectForm(args);
             String pattern = form == null ? entry.get(key) : entry.getForm(key, form);
             // Parse each pattern once; CompiledMessage clones its formatter per call.
-            return formats.computeIfAbsent(pattern, p -> new CompiledMessage(p, getLocale(), parameterCount))
+            return formats.computeIfAbsent(pattern, p -> new CompiledMessage(p, getLocale(), parameterCount, innerPluralIndex))
                     .format(args, adjust(args), safeHtml);
         }
 
@@ -180,6 +182,17 @@ public class MessagesProxy extends AbstractI18nProxy {
             adjusters.forEach(adjuster -> adjuster.adjust(formatArgs));
             return formatArgs;
         }
+    }
+
+    // GWT's {#} refers to the last @PluralCount parameter
+    private static int lastPluralCountIndex(Method method) {
+        Parameter[] parameters = method.getParameters();
+        for (int i = parameters.length - 1; i >= 0; i--) {
+            if (parameters[i].isAnnotationPresent(PluralCount.class)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** Rejects the signatures GWT's MessagesMethodCreator refuses to compile. */
