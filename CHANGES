@@ -3,55 +3,80 @@ Hermes Change Log
 
 Version 2.0.0 -- TBD
 -------------------------------------------------------------------------------
+Hermes now aims to behave exactly like GWT's own i18n code generation, so some
+interfaces and properties files that worked in 1.2 behave differently or are
+rejected. Review the breaking changes before upgrading.
 
-* Major version upgrade with potentially breaking changes
-* Java 8 minimum required
-* Built with Maven (./mvnw) instead of Ant and Ivy
-* Requires ICU4J 74.2 (was 4.6).
-* Large refactoring of proxy internals. The proxy and plural classes moved
-  out of com.mattbertolini.hermes; update imports:
+Breaking Changes:
+* Java 8 or later and ICU4J 74.2 (was ICU 4.6) are required.
+* The proxy and plural classes moved out of com.mattbertolini.hermes:
   - MessagesProxy, GwtPlural, CustomPlural and Plural are now in
     com.mattbertolini.hermes.messages
   - ConstantsProxy and ConstantsWithLookupProxy are now in
     com.mattbertolini.hermes.constants
-* Number/date formatting and plural rules now always use the requested locale.
-  Previously, if no properties file existed for the requested locale, they
-  used the locale of the fallback file, or the JVM default locale when falling
-  back to the default properties file.
-* Constants methods must return a type GWT supports (String, int, float,
-  double, boolean, String[] or Map). Other return types now throw an
-  IllegalArgumentException; previously they returned the raw string value.
-* Properties files, annotations and alternate forms are resolved exactly as GWT
-  does:
-  - Locales are searched in GWT's order, including script, region and alias
-    fallbacks (zh_TW uses zh_Hant, es_MX uses es_419, iw and he are aliases).
-    Private-use variants use GWT's file names (e.g. Foo_en_US_X-PRIV).
-  - A message's alternate forms come only from the file or annotations that
-    define its base message, so annotation forms no longer leak into a
-    translated locale.
-  - With several @PluralCount/@Select parameters, each selector commits to its
-    best form in turn, as GWT's generated code does.
-  - A child interface's annotations take precedence over a parent's default
-    properties file, and @DefaultLocale is honored.
-  - An interface without its own properties file is accepted when all of its
-    keys resolve elsewhere, such as in a child interface's file.
-  - @GenerateKeys (MD5, method name and fully qualified method name
-    generators) is supported.
-  - Localized custom PluralRule classes are found along the full locale search
-    list (Rule_pt_PT before Rule_pt).
-* String[] and Map constants are parsed like GWT: escaped commas, trimming,
-  map[key]=value entries, declaration order, and a MissingResourceException for
-  missing map values. Map constants are now unmodifiable.
-* Messages support GWT's {0,list}, {0,localdatetime,skeleton},
-  {0,localdatetime,predef:NAME} and inner-plural {#} formats. Like GWT, an
-  argument index beyond the method's parameters or an unterminated quote is an
-  IllegalArgumentException.
-* Message signatures GWT rejects now throw IllegalArgumentException: float or
-  double @Select (previously a Hermes extension), boxed @PluralCount, a
-  parameter with both @PluralCount and @Select, and SafeHtml arguments on
-  methods that don't return SafeHtml. A Constants method with more than one
-  @Default*Value annotation is also rejected, as in GWT.
-*
+* The proxy internals were rewritten. AbstractI18nProxy and the proxy
+  constructors now take a ResourceList instead of a Properties object, and
+  Hermes is a final utility class that cannot be instantiated.
+* Number/date formatting and plural rules always use the requested locale.
+  Previously they used the locale of the properties file that was found, or the
+  JVM default locale when falling back to the default file.
+* Locale IDs are canonicalized (en_us is treated as en_US), and private-use
+  variants use GWT's file names (Foo_en_US_X-PRIV instead of Foo_en_US_X_PRIV).
+* A message's alternate forms come only from the file or annotations that
+  define its base message, so @AlternateMessage forms no longer leak into a
+  translated locale whose file defines only the base message.
+* With several @PluralCount/@Select parameters, each selector commits to its
+  best form in turn (exact value, then plural form or value, then "other"), as
+  GWT's generated code does.
+* Map constants are unmodifiable, keep declaration order, and throw
+  MissingResourceException for a listed key with no value (previously null).
+* Interfaces GWT refuses to compile now throw IllegalArgumentException:
+  - Constants methods returning a type other than String, int, float, double,
+    boolean, String[] or Map (previously the raw string was returned)
+  - float or double @Select parameters (previously a Hermes extension), boxed
+    @PluralCount parameters, and parameters with both @PluralCount and @Select
+  - SafeHtml arguments on methods that don't return SafeHtml
+  - more than one @Default*Value annotation on a Constants method
+  - an argument index beyond the method's parameters, an unterminated single
+    quote, or {#} in a message without a @PluralCount parameter
+Features:
+* Locale fallback: properties files are searched in GWT's order, from the
+  requested locale up to the default file, including script, region and alias
+  fallbacks (zh_TW uses zh_Hant, es_MX uses es_419, iw and he are aliases).
+* Properties inheritance between i18n interfaces, including multiple
+  inheritance (thanks to donal-s, pull request #5). Within a locale a child
+  interface takes precedence over its parents, a child's annotations take
+  precedence over a parent's default file, and @DefaultLocale is honored.
+* An interface needs no properties file of its own when all of its keys
+  resolve elsewhere: in its annotations or in another interface's file, such
+  as a child's.
+* Default interface methods are supported. On Java 16 and later, interfaces
+  with default methods must be public.
+* Plural exact values (=n), @Offset, List and array @PluralCount parameters,
+  and the inner-plural {#} argument.
+* GWT's {0,list}, {0,localdatetime,skeleton} and
+  {0,localdatetime,predef:NAME} message formats.
+* @GenerateKeys with GWT's MD5, method name and fully qualified method name
+  key generators.
+* String[] and Map constants are parsed like GWT: escaped commas, trimmed
+  items, and map[key]=value entries.
+* Localized custom PluralRule classes are found along the full locale search
+  list (Rule_pt_PT before Rule_pt).
+* Nested interfaces may name their properties files Outer$Inner or
+  Outer_Inner.
+* Proxies implement equals and hashCode (identity) as well as toString.
+* ConstantsWithLookup lookups check the constant's return type and reject
+  default and static methods.
+* Parsed messages and constant values are cached per method for faster
+  repeated calls.
+Bug Fixes:
+* The proxy cache is thread-safe, and is keyed by class rather than class
+  name, so same-named interfaces from different class loaders no longer
+  collide or keep old class loaders alive.
+* Properties file streams are closed correctly after loading.
+Other:
+* Built with Maven (./mvnw) instead of Ant and Ivy, with code coverage and a
+  license header check.
 
 Version 1.2.0 -- 2011-05-12
 -------------------------------------------------------------------------------
