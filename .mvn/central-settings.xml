@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hermes - GWT Server-side I18N Library
+  Copyright (C) 2011-2026  Matt Bertolini
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+-->
+<!--
+  Maven settings for publishing to Maven Central, used only through
+  scripts/publish.sh (mvn -s .mvn/central-settings.xml). It holds no secrets:
+  the Central Portal token comes from environment variables that can be filled
+  in an execution environment.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+    <servers>
+        <server>
+            <id>central</id>
+            <username>${env.CENTRAL_USERNAME}</username>
+            <password>${env.CENTRAL_PASSWORD}</password>
+        </server>
+    </servers>
+</settings>
