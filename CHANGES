@@ -87,7 +87,7 @@ Bug Fixes:
 Other:
 * Built with Maven (./mvnw) instead of Ant and Ivy, with code coverage and a
   license header check.
-* Depends on org.jspecify:jspecify 1.0.0, an annotations-only library with
+* Depends on org.jspecify:jspecify 1.0.1, an annotations-only library with
   no runtime behavior.
 
 Version 1.2.0 -- 2011-05-12
