@@ -32,6 +32,7 @@ import com.mattbertolini.hermes.MethodHandler;
 import com.mattbertolini.hermes.Resource;
 import com.mattbertolini.hermes.ResourceList;
 import com.mattbertolini.hermes.internal.locale.GwtLocales;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
@@ -90,12 +91,12 @@ public class MessagesProxy extends AbstractI18nProxy {
     /** Picks one selector's form from those available, or null when none applies. */
     @FunctionalInterface
     private interface AlternateFormSelector {
-        String select(Object[] args, Collection<String> available);
+        @Nullable String select(@Nullable Object[] args, Collection<String> available);
     }
 
     @FunctionalInterface
     private interface ArgumentAdjuster {
-        void adjust(Object[] formatArgs);
+        void adjust(@Nullable Object[] formatArgs);
     }
 
     private final class MessageHandler implements MethodHandler {
@@ -126,7 +127,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         }
 
         @Override
-        public Object handle(Object[] args) {
+        public Object handle(@Nullable Object[] args) {
             String form = selectForm(args);
             String pattern = form == null ? entry.get(key) : entry.getForm(key, form);
             // Parse each pattern once; CompiledMessage clones its formatter per call.
@@ -156,7 +157,7 @@ public class MessagesProxy extends AbstractI18nProxy {
          * then "other"), and if a later selector then finds nothing under that
          * choice, the default message is used.
          */
-        private String selectForm(Object[] args) {
+        private @Nullable String selectForm(@Nullable Object[] args) {
             List<String[]> remaining = forms;
             List<String> chosen = new ArrayList<>();
             for (int i = 0; i < selectors.size() && !remaining.isEmpty(); i++) {
@@ -174,11 +175,11 @@ public class MessagesProxy extends AbstractI18nProxy {
             return chosen.size() == selectors.size() && !remaining.isEmpty() ? String.join(SEPARATOR, chosen) : null;
         }
 
-        private Object[] adjust(Object[] args) {
+        private @Nullable Object[] adjust(@Nullable Object[] args) {
             if (adjusters.isEmpty()) {
                 return args;
             }
-            Object[] formatArgs = args.clone();   // Selectors already used the raw values
+            @Nullable Object[] formatArgs = args.clone();   // Selectors already used the raw values
             adjusters.forEach(adjuster -> adjuster.adjust(formatArgs));
             return formatArgs;
         }
@@ -220,7 +221,7 @@ public class MessagesProxy extends AbstractI18nProxy {
                 .collect(toList());
     }
 
-    private AlternateFormSelector selectorFor(Parameter parameter, int index) {
+    private @Nullable AlternateFormSelector selectorFor(Parameter parameter, int index) {
         PluralCount pluralCount = parameter.getAnnotation(PluralCount.class);
         if (pluralCount != null) {
             return pluralSelector(parameter, pluralCount, index);
@@ -244,7 +245,7 @@ public class MessagesProxy extends AbstractI18nProxy {
     }
 
     private AlternateFormSelector pluralSelector(Parameter parameter, PluralCount pluralCount, int index) {
-        ToIntFunction<Object> counter = countFor(parameter, index);
+        ToIntFunction<@Nullable Object> counter = countFor(parameter, index);
         int offset = offsetOf(parameter);
         IntFunction<String> pluralForms = pluralFormsFor(pluralCount.value());
         return (args, available) -> {
@@ -281,7 +282,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             Parameter parameter = parameters[i];
             int offset = offsetOf(parameter);
             if (parameter.isAnnotationPresent(PluralCount.class) && (offset != 0 || isCollection(parameter.getType()))) {
-                ToIntFunction<Object> counter = countFor(parameter, i);
+                ToIntFunction<@Nullable Object> counter = countFor(parameter, i);
                 int index = i;
                 adjusters.add(formatArgs -> formatArgs[index] = counter.applyAsInt(formatArgs[index]) - offset);
             }
@@ -289,7 +290,7 @@ public class MessagesProxy extends AbstractI18nProxy {
         return adjusters;
     }
 
-    private static ToIntFunction<Object> countFor(Parameter parameter, int index) {
+    private static ToIntFunction<@Nullable Object> countFor(Parameter parameter, int index) {
         Class<?> type = parameter.getType();
         if (PLURAL_COUNT_TYPES.contains(type)) {
             return arg -> ((Number) arg).intValue();
@@ -361,26 +362,29 @@ public class MessagesProxy extends AbstractI18nProxy {
     private enum SelectKind {
         ENUM(Enum.class::isAssignableFrom) {
             @Override
-            boolean matches(Object arg, String value) {
+            boolean matches(@Nullable Object arg, String value) {
                 return arg != null && ((Enum<?>) arg).name().equals(value);
             }
         },
         STRING(String.class::equals) {
             @Override
-            boolean matches(Object arg, String value) {
+            boolean matches(@Nullable Object arg, String value) {
                 return value.equals(arg);
             }
         },
         BOOLEAN(boolean.class::equals) {
             @Override
-            boolean matches(Object arg, String value) {
+            boolean matches(@Nullable Object arg, String value) {
                 // GWT tests Boolean.parseBoolean(value), so any form other than "true" means false
-                return Boolean.parseBoolean(value) == (Boolean) arg;
+                return Boolean.valueOf(Boolean.parseBoolean(value)).equals(arg);
             }
         },
         INTEGRAL(SELECT_INTEGRAL_TYPES::contains) {
             @Override
-            boolean matches(Object arg, String value) {
+            boolean matches(@Nullable Object arg, String value) {
+                if (arg == null) {
+                    return false;   // Primitive parameters are never null
+                }
                 long number = arg instanceof Character ? (Character) arg : ((Number) arg).longValue();
                 try {
                     return Long.parseLong(value) == number;
@@ -396,7 +400,7 @@ public class MessagesProxy extends AbstractI18nProxy {
             this.matcher = matcher;
         }
 
-        abstract boolean matches(Object arg, String value);
+        abstract boolean matches(@Nullable Object arg, String value);
 
         static Optional<SelectKind> forType(Class<?> type) {
             return Arrays.stream(values()).filter(kind -> kind.matcher.test(type)).findFirst();

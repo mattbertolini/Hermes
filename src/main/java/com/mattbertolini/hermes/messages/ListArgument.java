@@ -24,6 +24,7 @@ import com.ibm.icu.text.ListFormatter;
 import com.ibm.icu.text.MessageFormat;
 import com.ibm.icu.text.MessagePattern;
 import com.ibm.icu.util.ULocale;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ final class ListArgument implements ExtraArgument {
     private final MessageFormat elementFormat;
     private final ListFormatter listFormatter;   // Only built for patterns that have a list
 
-    ListArgument(int index, String elementStyle, ULocale locale) {
+    ListArgument(int index, @Nullable String elementStyle, ULocale locale) {
         this.index = index;
         this.listFormatter = ListFormatter.getInstance(locale);
         this.elementFormat = new MessageFormat("", locale);
@@ -47,7 +48,7 @@ final class ListArgument implements ExtraArgument {
     }
 
     @Override
-    public Object format(Object[] args, boolean safeHtml) {
+    public Object format(@Nullable Object[] args, boolean safeHtml) {
         List<String> items = new ArrayList<>();
         for (Object element : elements(args[index])) {
             MessageFormat formatter = (MessageFormat) elementFormat.clone();
@@ -57,7 +58,7 @@ final class ListArgument implements ExtraArgument {
         return safeHtml ? SafeHtmlUtils.fromTrustedString(list) : list;
     }
 
-    private List<?> elements(Object arg) {
+    private List<?> elements(@Nullable Object arg) {
         if (arg == null) {
             return Collections.emptyList();
         }

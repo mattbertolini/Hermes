@@ -24,6 +24,7 @@ import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.ibm.icu.text.MessageFormat;
 import com.ibm.icu.text.MessagePattern;
 import com.ibm.icu.util.ULocale;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,15 +61,15 @@ final class CompiledMessage {
         this.format.applyPattern(rewrite(pattern), MessagePattern.ApostropheMode.DOUBLE_REQUIRED);
     }
 
-    Object format(Object[] rawArgs, Object[] args, boolean safeHtml) {
-        Object[] formatArgs = args;
+    Object format(@Nullable Object[] rawArgs, @Nullable Object[] args, boolean safeHtml) {
+        @Nullable Object[] formatArgs = args;
         if (!extras.isEmpty()) {
             formatArgs = Arrays.copyOf(args, args.length + extras.size());
             for (int i = 0; i < extras.size(); i++) {
                 formatArgs[args.length + i] = extras.get(i).format(rawArgs, safeHtml);
             }
         }
-        if (safeHtml && formatArgs != null) {
+        if (safeHtml) {
             formatArgs = Arrays.stream(formatArgs).map(CompiledMessage::escape).toArray();
         }
         // MessageFormat isn't thread-safe, so each call formats with its own clone
@@ -165,7 +166,7 @@ final class CompiledMessage {
         return -1;
     }
 
-    static Object escape(Object arg) {
+    static Object escape(@Nullable Object arg) {
         if (arg instanceof SafeHtml) {
             return ((SafeHtml) arg).asString();
         }

@@ -19,6 +19,7 @@
 
 package com.mattbertolini.hermes.internal.reflect;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -44,7 +45,7 @@ import java.util.concurrent.Callable;
 @RunWith(Parameterized.class)
 public class DefaultMethodsInvokerTest {
     private final Callable<DefaultMethods.Invoker> factory;
-    private DefaultMethods.Invoker invoker;
+    private DefaultMethods.@Nullable Invoker invoker;
     private LoudGreeter proxy;
 
     public DefaultMethodsInvokerTest(String name, Callable<DefaultMethods.Invoker> factory) {

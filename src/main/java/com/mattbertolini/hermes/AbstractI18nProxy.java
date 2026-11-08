@@ -21,6 +21,7 @@ package com.mattbertolini.hermes;
 
 import com.ibm.icu.util.ULocale;
 import com.mattbertolini.hermes.internal.reflect.DefaultMethods;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -28,6 +29,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractI18nProxy implements InvocationHandler {
+    /**
+     * Constant for an empty array so we can avoid passing null for proxied methods without arguements.
+     */
+    private static final @Nullable Object[] NO_ARGS = new Object[0];
+
     private final Class<?> clazz;
     private final ResourceList resources;
     private final ULocale locale;
@@ -41,16 +47,16 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
     }
     
     @Override
-    public final Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    public final @Nullable Object invoke(Object proxy, Method method, @Nullable Object @Nullable [] args) throws Throwable {
         if (method.getDeclaringClass() == Object.class) {
-            return invokeObjectMethod(proxy, method, args);
+            return invokeObjectMethod(proxy, method, normalizeArgs(args));
         }
         if (method.isDefault()) {
             return DefaultMethods.invokeDefault(proxy, method, args);
         }
-        return handlerFor(method).handle(args);
+        return handlerFor(method).handle(normalizeArgs(args));
     }
-    
+
     protected ResourceList getResources() {
         return this.resources;
     }
@@ -78,7 +84,7 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
         return this.getClass().getName() + ": " + this.clazz.getName();
     }
 
-    private Object invokeObjectMethod(Object proxy, Method method, Object[] args) {
+    private Object invokeObjectMethod(Object proxy, Method method, @Nullable Object[] args) {
         switch (method.getName()) {
             case "equals":
                 return proxy == args[0];
@@ -89,5 +95,9 @@ public abstract class AbstractI18nProxy implements InvocationHandler {
             default:
                 throw new UnsupportedOperationException("Unsupported method: " + method);
         }
+    }
+
+    private static @Nullable Object[] normalizeArgs(@Nullable Object @Nullable [] args) {
+        return args == null ? NO_ARGS : args;
     }
 }

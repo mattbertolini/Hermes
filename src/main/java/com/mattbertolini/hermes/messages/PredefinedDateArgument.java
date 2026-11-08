@@ -22,6 +22,7 @@ package com.mattbertolini.hermes.messages;
 import com.ibm.icu.text.DateFormat;
 import com.ibm.icu.text.SimpleDateFormat;
 import com.ibm.icu.util.ULocale;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -75,7 +76,7 @@ final class PredefinedDateArgument implements ExtraArgument {
     }
 
     @Override
-    public Object format(Object[] args, boolean safeHtml) {
+    public Object format(@Nullable Object[] args, boolean safeHtml) {
         // DateFormat isn't thread-safe
         return ((DateFormat) format.clone()).format(args[index]);
     }

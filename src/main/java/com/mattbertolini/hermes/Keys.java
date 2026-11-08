@@ -23,6 +23,7 @@ import com.google.gwt.i18n.client.LocalizableResource.GenerateKeys;
 import com.google.gwt.i18n.client.LocalizableResource.Key;
 import com.google.gwt.i18n.client.LocalizableResource.Meaning;
 import com.google.gwt.i18n.client.Messages.DefaultMessage;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -32,6 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -42,7 +44,7 @@ import java.util.function.Function;
 final class Keys {
     // Uppercase, as GWT's StringUtils.toHexString encodes MD5 keys
     private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
-    private static final Map<String, Function<Method, String>> GENERATORS = new HashMap<>();
+    private static final Map<String, Function<Method, @Nullable String>> GENERATORS = new HashMap<>();
 
     static {
         // GWT ships each generator under both its old (rebind) and new (server) package
@@ -65,8 +67,9 @@ final class Keys {
     static String keyFor(Class<?> targetClass, Method method) {
         String key = keyOrNull(targetClass, method);
         if (key == null) {
+            // Only a key generator can fail to compute a key, so @GenerateKeys is present
             throw new IllegalArgumentException("Key generator "
-                    + classAnnotation(targetClass, GenerateKeys.class).value()
+                    + Objects.requireNonNull(classAnnotation(targetClass, GenerateKeys.class)).value()
                     + " requires the default value be specified in an annotation for method " + method.getName());
         }
         return key;
@@ -76,7 +79,7 @@ final class Keys {
      * Like {@link #keyFor}, but returns null when the key generator can't
      * compute a key, as GWT's MD5KeyGenerator does without default text.
      */
-    static String keyOrNull(Class<?> targetClass, Method method) {
+    static @Nullable String keyOrNull(Class<?> targetClass, Method method) {
         Key key = method.getAnnotation(Key.class);
         if (key != null) {
             return key.value();
@@ -85,7 +88,7 @@ final class Keys {
         if (generateKeys == null) {
             return method.getName();
         }
-        Function<Method, String> generator = GENERATORS.get(generateKeys.value());
+        Function<Method, @Nullable String> generator = GENERATORS.get(generateKeys.value());
         if (generator == null) {
             throw new IllegalArgumentException("Unsupported key generator in @GenerateKeys on "
                     + targetClass.getName() + ": " + generateKeys.value());
@@ -94,7 +97,7 @@ final class Keys {
     }
 
     /** Finds a class annotation on the interface or, failing that, its superinterfaces. */
-    static <A extends Annotation> A classAnnotation(Class<?> clazz, Class<A> annotationType) {
+    static <A extends Annotation> @Nullable A classAnnotation(Class<?> clazz, Class<A> annotationType) {
         A annotation = clazz.getAnnotation(annotationType);
         for (int i = 0; annotation == null && i < clazz.getInterfaces().length; i++) {
             annotation = classAnnotation(clazz.getInterfaces()[i], annotationType);
@@ -102,7 +105,7 @@ final class Keys {
         return annotation;
     }
 
-    private static String md5Key(Method method) {
+    private static @Nullable String md5Key(Method method) {
         String text = defaultText(method);
         if (text == null) {
             return null;   // Cannot compute a key if no default text is supplied
@@ -126,7 +129,7 @@ final class Keys {
     }
 
     /** The text GWT's MD5KeyGenerator hashes (KeyGenMessage.getDefaultMessage). */
-    private static String defaultText(Method method) {
+    private static @Nullable String defaultText(Method method) {
         DefaultMessage message = method.getAnnotation(DefaultMessage.class);
         if (message != null) {
             return message.value();

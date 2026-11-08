@@ -321,14 +321,14 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testStringArraySplitsLikeGwt() throws IOException {
-        CollectionConstants constants = Hermes.get(CollectionConstants.class, null);
+        CollectionConstants constants = Hermes.get(CollectionConstants.class);
         Assert.assertArrayEquals(new String[]{"a,b", "c", "d", ""}, constants.escapedArray());
         Assert.assertArrayEquals(new String[]{"x,y", "z"}, constants.defaultArray());
     }
 
     @Test
     public void testMapUsesBracketFormsInDeclarationOrder() throws IOException {
-        CollectionConstants constants = Hermes.get(CollectionConstants.class, null);
+        CollectionConstants constants = Hermes.get(CollectionConstants.class);
         Map<String, String> formMap = constants.formMap();
         Assert.assertEquals(Arrays.asList("red", "blue"), new ArrayList<>(formMap.keySet()));
         Assert.assertEquals("Rouge", formMap.get("red"));
@@ -395,8 +395,8 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testChildAnnotationBeatsParentDefaultFile() throws IOException {
-        Assert.assertEquals("Child", Hermes.get(PrecedenceChild.class, null).title());
-        Assert.assertEquals("Parent", Hermes.get(PrecedenceParent.class, null).title());
+        Assert.assertEquals("Child", Hermes.get(PrecedenceChild.class).title());
+        Assert.assertEquals("Parent", Hermes.get(PrecedenceParent.class).title());
     }
 
     @Test
@@ -407,40 +407,40 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testSafeHtmlArgumentRequiresSafeHtmlReturn() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class,
                 () -> messages.safeHtmlArgument(SafeHtmlUtils.fromString("x")));
     }
 
     @Test
     public void testPluralCountAndSelectOnSameParameterIsRejected() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.pluralAndSelect(1));
     }
 
     @Test
     public void testAlternateFormsWithWrongSelectorCountAreRejected() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.wrongSelectorCount(1));
     }
 
     @Test
     public void testBooleanSelect() throws IOException {
-        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class);
         Assert.assertEquals("yes", messages.bool(true));
         Assert.assertEquals("no", messages.bool(false));
     }
 
     @Test
     public void testCharSelectMatchesIntegralValue() throws IOException {
-        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class);
         Assert.assertEquals("letter A", messages.character('A'));
         Assert.assertEquals("other", messages.character('B'));
     }
 
     @Test
     public void testStringSelectTreatsExactPrefixAsValue() throws IOException {
-        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class);
         Assert.assertEquals("is red", messages.color("red"));
         Assert.assertEquals("is blue", messages.color("blue"));
         Assert.assertEquals("other", messages.color("green"));
@@ -449,7 +449,7 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testEnumSelectTreatsExactPrefixAsValue() throws IOException {
-        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class, null);
+        SelectMatchingMessages messages = Hermes.get(SelectMatchingMessages.class);
         Assert.assertEquals("male", messages.gender(Gender.MALE));
         Assert.assertEquals("other", messages.gender(Gender.FEMALE));
         Assert.assertEquals("other", messages.gender(null));
@@ -464,36 +464,36 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testNestedInterfaceLoadsUnderscoreNamedPropertiesFile() throws IOException {
-        Assert.assertEquals("from underscore file", Hermes.get(UnderscoreFileMessages.class, null).message());
+        Assert.assertEquals("from underscore file", Hermes.get(UnderscoreFileMessages.class).message());
     }
 
     @Test
     public void testUnknownKeyGeneratorIsRejected() {
         IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
-                () -> Hermes.get(UnknownKeyGeneratorMessages.class, null));
+                () -> Hermes.get(UnknownKeyGeneratorMessages.class));
         Assert.assertTrue(e.getMessage(), e.getMessage().contains("com.example.NoSuchKeyGenerator"));
     }
 
     @Test
     public void testOddLengthAlternateMessageIsRejected() {
-        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddAlternateMessages.class, null));
+        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddAlternateMessages.class));
     }
 
     @Test
     public void testOddLengthDefaultStringMapValueIsRejected() {
-        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddMapConstants.class, null));
+        Assert.assertThrows(IllegalArgumentException.class, () -> Hermes.get(OddMapConstants.class));
     }
 
     @Test
     public void testParentKeyMayComeFromChildPropertiesFile() throws IOException {
-        KeyFromChildChild messages = Hermes.get(KeyFromChildChild.class, null);
+        KeyFromChildChild messages = Hermes.get(KeyFromChildChild.class);
         Assert.assertEquals("Hello", messages.title());
         Assert.assertEquals("Sub", messages.subtitle());
     }
 
     @Test
     public void testInterfaceWhoseKeysResolveNowhereStillFails() {
-        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(KeyFromChildParent.class, null));
+        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(KeyFromChildParent.class));
     }
 
     @Test
@@ -513,7 +513,7 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testInnerPluralArgumentWithoutPluralCountIsRejected() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.innerPluralWithoutPluralCount(1));
     }
 
@@ -545,25 +545,25 @@ public class GwtCompatibilityTest {
 
     @Test
     public void testArgumentBeyondParametersIsRejected() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.argumentOutOfRange("x"));
     }
 
     @Test
     public void testUnterminatedQuoteIsRejected() throws IOException {
-        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class, null);
+        InvalidSignatureMessages messages = Hermes.get(InvalidSignatureMessages.class);
         Assert.assertThrows(IllegalArgumentException.class, () -> messages.unterminatedQuote("x"));
     }
 
     @Test
     public void testUncomputableMd5KeyReportsMissingFile() {
-        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(Md5WithoutFileMessages.class, null));
+        Assert.assertThrows(FileNotFoundException.class, () -> Hermes.get(Md5WithoutFileMessages.class));
     }
 
     @Test
     public void testMoreThanOneDefaultValueAnnotationIsRejected() {
         IllegalArgumentException e = Assert.assertThrows(IllegalArgumentException.class,
-                () -> Hermes.get(TwoDefaultsConstants.class, null));
+                () -> Hermes.get(TwoDefaultsConstants.class));
         Assert.assertTrue(e.getMessage(), e.getMessage().contains("No more than one"));
     }
 }

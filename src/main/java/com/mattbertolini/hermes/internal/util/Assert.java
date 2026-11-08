@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes.internal.util;
 
+import org.jspecify.annotations.Nullable;
+
 public final class Assert {
     private Assert() {
         throw new UnsupportedOperationException("Utility class");
@@ -30,7 +32,7 @@ public final class Assert {
         }
     }
 
-    public static void argument(boolean expression, String messageFormat, Object... args) {
+    public static void argument(boolean expression, String messageFormat, @Nullable Object... args) {
         if (!expression) {
             throw new IllegalArgumentException(String.format(messageFormat, args));
         }

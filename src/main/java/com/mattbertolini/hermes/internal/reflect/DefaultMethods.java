@@ -20,6 +20,7 @@
 package com.mattbertolini.hermes.internal.reflect;
 
 import com.mattbertolini.hermes.internal.util.Assert;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -72,7 +73,7 @@ public final class DefaultMethods {
      *                                  accessible to Hermes (see the class documentation)
      * @throws Throwable                anything thrown by the default method
      */
-    public static Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
+    public static @Nullable Object invokeDefault(Object proxy, Method method, @Nullable Object @Nullable ... args) throws Throwable {
         return runtimeInvoker().invokeDefault(proxy, method, args);
     }
 
@@ -85,7 +86,7 @@ public final class DefaultMethods {
 
     @FunctionalInterface
     public interface Invoker {
-        Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable;
+        @Nullable Object invokeDefault(Object proxy, Method method, @Nullable Object @Nullable ... args) throws Throwable;
 
         /**
          * Picks the newest strategy the running JVM supports.
@@ -126,7 +127,7 @@ public final class DefaultMethods {
         }
 
         @Override
-        public Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
+        public @Nullable Object invokeDefault(Object proxy, Method method, @Nullable Object @Nullable ... args) throws Throwable {
             return (Object) invokeDefault.invokeExact(proxy, method, args);
         }
     }
@@ -140,10 +141,10 @@ public final class DefaultMethods {
         private static final Object[] NO_ARGS = new Object[0];
 
         @Override
-        public final Object invokeDefault(Object proxy, Method method, Object... args) throws Throwable {
+        public final @Nullable Object invokeDefault(Object proxy, Method method, @Nullable Object @Nullable ... args) throws Throwable {
             Objects.requireNonNull(proxy, "proxy");
             Objects.requireNonNull(method, "method");
-            Object[] actualArgs = args == null ? NO_ARGS : args;
+            @Nullable Object[] actualArgs = args == null ? NO_ARGS : args;
             checkInvocation(proxy, method, actualArgs);
             Class<?> declaringClass = method.getDeclaringClass();
             return lookupFor(declaringClass)
@@ -154,7 +155,7 @@ public final class DefaultMethods {
 
         abstract MethodHandles.Lookup lookupFor(Class<?> declaringClass) throws Throwable;
 
-        private static void checkInvocation(Object proxy, Method method, Object[] args) {
+        private static void checkInvocation(Object proxy, Method method, @Nullable Object[] args) {
             Assert.argument(Proxy.isProxyClass(proxy.getClass()), "'proxy' is not a proxy instance");
             Assert.argument(method.isDefault(), "\"%s\" is not a default method", method);
             Assert.argument(method.getDeclaringClass().isInstance(proxy), "\"%s\" is not a method declared in a proxy interface of %s",
@@ -167,7 +168,7 @@ public final class DefaultMethods {
             }
         }
 
-        private static boolean isAssignable(Class<?> parameterType, Object arg) {
+        private static boolean isAssignable(Class<?> parameterType, @Nullable Object arg) {
             if (!parameterType.isPrimitive()) {
                 return arg == null || parameterType.isInstance(arg);
             }

@@ -63,6 +63,7 @@
 
         <gwt.version>2.2.0</gwt.version>
         <icu4j.version>74.2</icu4j.version>
+        <jspecify.version>1.0.1</jspecify.version>
         <junit.version>4.13.2</junit.version>
 
         <central-publishing-maven-plugin.version>0.8.0</central-publishing-maven-plugin.version>
@@ -88,6 +89,11 @@
             <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>
             <version>${icu4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>${jspecify.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

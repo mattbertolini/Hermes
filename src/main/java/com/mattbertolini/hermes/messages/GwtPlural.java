@@ -58,6 +58,10 @@ public enum GwtPlural implements Plural {
     
     public static Plural fromNumber(PluralRules pluralRules, double number) {
         String icuValue = pluralRules.select(number);
-        return ICU_VALUE_LOOKUP_MAP.get(icuValue);
+        GwtPlural plural = ICU_VALUE_LOOKUP_MAP.get(icuValue);
+        if (plural == null) {
+            throw new IllegalStateException("Unrecognized ICU plural keyword: " + icuValue);
+        }
+        return plural;
     }
 }

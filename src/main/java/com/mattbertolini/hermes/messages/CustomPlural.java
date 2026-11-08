@@ -20,6 +20,7 @@
 package com.mattbertolini.hermes.messages;
 
 import com.google.gwt.i18n.client.PluralRule;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -51,7 +52,7 @@ public class CustomPlural implements Plural {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof CustomPlural)) {
             return false;
         }

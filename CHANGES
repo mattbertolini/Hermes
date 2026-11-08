@@ -17,6 +17,11 @@ Breaking Changes:
 * The proxy internals were rewritten. AbstractI18nProxy and the proxy
   constructors now take a ResourceList instead of a Properties object, and
   Hermes is a final utility class that cannot be instantiated.
+* Hermes.get(Class, String) no longer accepts a null locale and throws
+  IllegalArgumentException. Use the new Hermes.get(Class), "default" or an
+  empty string for GWT's default locale.
+* MethodHandler.handle receives an empty array, never null, for methods
+  without parameters.
 * Number/date formatting and plural rules always use the requested locale.
   Previously they used the locale of the properties file that was found, or the
   JVM default locale when falling back to the default file.
@@ -40,6 +45,11 @@ Breaking Changes:
   - an argument index beyond the method's parameters, an unterminated single
     quote, or {#} in a message without a @PluralCount parameter
 Features:
+* Hermes.get(Class) returns the proxy for GWT's default locale.
+* JSpecify nullness annotations: every package is @NullMarked, and the
+  parameters, fields and return values that may be null are marked
+  @Nullable, so tools such as NullAway, the Checker Framework, IntelliJ IDEA
+  and Kotlin know which values can be null.
 * Locale fallback: properties files are searched in GWT's order, from the
   requested locale up to the default file, including script, region and alias
   fallbacks (zh_TW uses zh_Hant, es_MX uses es_419, iw and he are aliases).
@@ -77,6 +87,8 @@ Bug Fixes:
 Other:
 * Built with Maven (./mvnw) instead of Ant and Ivy, with code coverage and a
   license header check.
+* Depends on org.jspecify:jspecify 1.0.0, an annotations-only library with
+  no runtime behavior.
 
 Version 1.2.0 -- 2011-05-12
 -------------------------------------------------------------------------------

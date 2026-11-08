@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes.messages;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A message argument ICU can't format itself, formatted up front and passed
  * to MessageFormat as an extra argument after the method's parameters.
@@ -28,5 +30,5 @@ interface ExtraArgument {
      * @param args the method's raw arguments
      * @return the formatted value; SafeHtml when it is already escaped
      */
-    Object format(Object[] args, boolean safeHtml);
+    Object format(@Nullable Object[] args, boolean safeHtml);
 }

@@ -20,6 +20,7 @@
 package com.mattbertolini.hermes;
 
 import com.ibm.icu.util.ULocale;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -29,10 +30,10 @@ import java.util.Objects;
  */
 public final class LocaleMapKey {
     private final String className;
-    private final ULocale locale;
+    private final @Nullable ULocale locale;
     private final ULocale formattingLocale;
 
-    public LocaleMapKey(String className, ULocale locale, ULocale formattingLocale) {
+    public LocaleMapKey(String className, @Nullable ULocale locale, ULocale formattingLocale) {
         this.className = className;
         this.locale = locale;
         this.formattingLocale = formattingLocale;
@@ -42,7 +43,7 @@ public final class LocaleMapKey {
         return this.className;
     }
 
-    public ULocale getLocale() {
+    public @Nullable ULocale getLocale() {
         return this.locale;
     }
 
@@ -51,7 +52,7 @@ public final class LocaleMapKey {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof LocaleMapKey)) {
             return false;
         }

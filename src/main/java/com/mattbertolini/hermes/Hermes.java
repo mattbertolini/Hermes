@@ -28,6 +28,7 @@ import com.mattbertolini.hermes.constants.ConstantsProxy;
 import com.mattbertolini.hermes.constants.ConstantsWithLookupProxy;
 import com.mattbertolini.hermes.internal.locale.GwtLocales;
 import com.mattbertolini.hermes.messages.MessagesProxy;
+import org.jspecify.annotations.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -70,18 +71,39 @@ public final class Hermes {
     }
 
     /**
-     * For a given interface and locale ,retrieves the GWT i18n interface as a
-     * dynamic proxy for use on the server-side. If no locale is given, the
-     * default properties file will be loaded. This method caches proxy classes
-     * that it has created so it is safe to call multiple times. Locale IDs
-     * are canonicalized before use (i.e. en_us is treated as en_US), and
-     * properties files are searched in GWT's order, including script, region
-     * and alias fallbacks (e.g. zh_TW uses zh_Hant files).
+     * Retrieves the GWT i18n interface for GWT's default locale as a dynamic
+     * proxy for use on the server-side. The default properties files and
+     * annotation values are used, and numbers and dates are formatted in the
+     * JVM's default locale. Equivalent to
+     * {@code get(clazz, GwtLocale.DEFAULT_LOCALE)}.
+     *
+     * @param clazz The GWT i18n interface to get the proxy for.
+     * @return A dynamic proxy representing the given GWT i18n interface.
+     * @throws IOException If an error occurs finding, opening, or reading the
+     *                     GWT properties file associated with the given interface.
+     * @see #get(Class, String)
+     */
+    public static <T> T get(Class<T> clazz) throws IOException {
+        return get(clazz, GwtLocale.DEFAULT_LOCALE);
+    }
+
+    /**
+     * For a given interface and locale, retrieves the GWT i18n interface as a
+     * dynamic proxy for use on the server-side. This method caches proxy
+     * classes that it has created so it is safe to call multiple times.
+     * Locale IDs are canonicalized before use (i.e. en_us is treated as
+     * en_US), and properties files are searched in GWT's order, including
+     * script, region and alias fallbacks (e.g. zh_TW uses zh_Hant files).
      *
      * @param clazz     The GWT i18n interface to get the proxy for.
      * @param localeStr The locale ID string for the locale being requested.
+     *                  GWT's default locale ({@code "default"}) or an empty
+     *                  string loads the default properties files, the same as
+     *                  {@link #get(Class)}.
      * @return A dynamic proxy representing the given GWT i18n interface and
      * locale.
+     * @throws IllegalArgumentException If the class or locale is null, or the
+     *                                  class is not a GWT i18n interface.
      * @throws IOException If an error occurs finding, opening, or reading the
      *                     GWT properties file associated with the given interface.
      */
@@ -89,6 +111,9 @@ public final class Hermes {
     public static <T> T get(Class<T> clazz, String localeStr) throws IOException {
         if (clazz == null) {
             throw new IllegalArgumentException("Class cannot be null.");
+        }
+        if (localeStr == null) {
+            throw new IllegalArgumentException("Locale cannot be null. Use get(Class) for the default locale.");
         }
         I18nType type = I18nType.of(clazz).orElseThrow(() -> new IllegalArgumentException(
                 "Class " + clazz.getName() + " does not implement required interfaces."));
@@ -198,7 +223,7 @@ public final class Hermes {
     }
 
     // A key the generator can't compute (MD5 without default text) resolves nowhere
-    private static boolean resolves(String key, ResourceList resources) {
+    private static boolean resolves(@Nullable String key, ResourceList resources) {
         return key != null && resources.getString(key) != null;
     }
 
@@ -207,7 +232,7 @@ public final class Hermes {
      * returns null if there is none. Like GWT, a nested interface's file may
      * be named Outer$Inner or Outer_Inner.
      */
-    private static Resource loadPropertiesFile(Class<?> clazz, GwtLocale locale) throws IOException {
+    private static @Nullable Resource loadPropertiesFile(Class<?> clazz, GwtLocale locale) throws IOException {
         String suffix = locale.isDefault() ? "" : LOCALE_SEPARATOR + locale.getAsString();
         String classname = getPropertiesClassname(clazz);
         InputStream is = clazz.getResourceAsStream(classname + suffix + PROPERTIES_EXT);

@@ -50,10 +50,46 @@ public class HermesTest {
         Assert.assertNotNull(proxy);
     }
     
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testNullLangArgument() throws IOException {
-        MessagesProxyTestData proxy = Hermes.get(MessagesProxyTestData.class, null);
-        Assert.assertNotNull(proxy);
+        Hermes.get(MessagesProxyTestData.class, null);
+    }
+
+    @Test
+    public void testNoLangArgumentUsesDefaultLocale() throws IOException {
+        MessagesProxyTestData proxy = Hermes.get(MessagesProxyTestData.class);
+        Assert.assertSame(proxy, Hermes.get(MessagesProxyTestData.class, "default"));
+        Assert.assertSame(proxy, Hermes.get(MessagesProxyTestData.class, ""));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNoLangArgumentNullClass() throws IOException {
+        Hermes.get(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNoLangArgumentClassNoImplementInterface() throws IOException {
+        Hermes.get(NoI18nInterface.class);
+    }
+
+    @Test
+    public void testDefaultLocaleStringLoadsDefaultFile() throws IOException {
+        Assert.assertEquals("This is a basic message with no key.",
+                Hermes.get(MessagesProxyTestData.class, "default").BasicMessageWithNoKey());
+    }
+
+    @Test
+    public void testDefaultLocaleTextIgnoresJvmDefaultLocale() throws IOException {
+        // A MessagesProxyTestData_fr file exists, but the default locale never reads it
+        ULocale.setDefault(ULocale.FRANCE);
+        try {
+            Assert.assertEquals("This is a basic message with no key.",
+                    Hermes.get(MessagesProxyTestData.class).BasicMessageWithNoKey());
+            Assert.assertEquals("This is a basic message with no key.",
+                    Hermes.get(MessagesProxyTestData.class, "default").BasicMessageWithNoKey());
+        } finally {
+            ULocale.setDefault(ULocale.US);
+        }
     }
     
     @Test(expected = FileNotFoundException.class)
@@ -101,7 +137,7 @@ public class HermesTest {
 
     @Test
     public void testClassOverridesSuperclassProperties() throws IOException {
-        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class, null);
+        SubMessagesProxyTestData testData = Hermes.get(SubMessagesProxyTestData.class);
         String expected = "This is a basic message with no key overridden by subclass.";
         String actual = testData.BasicMessageWithNoKey();
         Assert.assertEquals(expected, actual);
@@ -210,17 +246,17 @@ public class HermesTest {
 
     @Test
     public void testFormattingUsesDefaultLocaleWhenNoLocaleRequested() throws IOException {
-        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, null);
+        MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class);
         Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12,345.67.",
                 testData.MessageWithNumberFormattedArgument(12345.67d));
     }
 
     @Test
     public void testFormattingFollowsDefaultLocaleChangesWhenNoLocaleRequested() throws IOException {
-        Hermes.get(MessagesProxyTestData.class, null);
+        Hermes.get(MessagesProxyTestData.class);
         ULocale.setDefault(ULocale.GERMANY);
         try {
-            MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class, null);
+            MessagesProxyTestData testData = Hermes.get(MessagesProxyTestData.class);
             Assert.assertEquals("This is a message with a number formatted based on the locale. The number is 12.345,67.",
                     testData.MessageWithNumberFormattedArgument(12345.67d));
         } finally {

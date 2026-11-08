@@ -17,4 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+@NullMarked
 package com.mattbertolini.hermes.internal.reflect;
+
+import org.jspecify.annotations.NullMarked;

@@ -26,6 +26,7 @@ import com.google.gwt.i18n.client.Messages.PluralText;
 import com.google.gwt.i18n.shared.GwtLocale;
 import com.mattbertolini.hermes.internal.locale.GwtLocales;
 import com.mattbertolini.hermes.internal.util.Assert;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -79,7 +80,7 @@ final class AnnotationResources {
         return GwtLocales.fromString(localeStr);
     }
 
-    private static String messageText(Method method) {
+    private static @Nullable String messageText(Method method) {
         DefaultMessage message = method.getAnnotation(DefaultMessage.class);
         return message == null ? null : message.value();
     }
@@ -97,7 +98,7 @@ final class AnnotationResources {
 
     // String arrays and map key lists are comma-joined with backslash escaping,
     // and map entries become plain keys, exactly as GWT encodes them.
-    private static String constantText(Method method, Map<String, String> values) {
+    private static @Nullable String constantText(Method method, Map<String, String> values) {
         return DefaultValue.of(method)
                 .map(defaultValue -> {
                     values.putAll(defaultValue.entries(method));

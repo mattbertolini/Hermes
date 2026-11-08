@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -48,11 +50,11 @@ public final class Resource {
         }
     }
 
-    public String get(String key) {
+    public @Nullable String get(String key) {
         return values.get(key);
     }
 
-    public String getForm(String key, String form) {
+    public @Nullable String getForm(String key, String form) {
         return values.get(formKey(key, form));
     }
 

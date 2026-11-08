@@ -19,6 +19,7 @@
 
 package com.mattbertolini.hermes;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.rules.ExternalResource;
 
 /**
@@ -28,8 +29,8 @@ import org.junit.rules.ExternalResource;
  */
 public final class DefaultTimeZoneRule extends ExternalResource {
     private final String zoneId;
-    private java.util.TimeZone originalJdkZone;
-    private com.ibm.icu.util.TimeZone originalIcuZone;
+    private java.util.@Nullable TimeZone originalJdkZone;
+    private com.ibm.icu.util.@Nullable TimeZone originalIcuZone;
 
     public DefaultTimeZoneRule(String zoneId) {
         this.zoneId = zoneId;

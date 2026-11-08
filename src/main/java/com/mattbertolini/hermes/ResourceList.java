@@ -19,6 +19,8 @@
 
 package com.mattbertolini.hermes;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,7 +36,7 @@ public final class ResourceList {
         this.resources = new ArrayList<>(resources);
     }
 
-    public String getString(String key) {
+    public @Nullable String getString(String key) {
         Resource entry = getEntry(key);
         return entry == null ? null : entry.get(key);
     }
@@ -42,7 +44,7 @@ public final class ResourceList {
     /**
      * First {@code key[form]} value in any resource, as GWT's getStringExt.
      */
-    public String getForm(String key, String form) {
+    public @Nullable String getForm(String key, String form) {
         for (Resource resource : resources) {
             String value = resource.getForm(key, form);
             if (value != null) {
@@ -56,7 +58,7 @@ public final class ResourceList {
      * The first resource defining the key. A message's alternate forms come
      * from this resource only, never from less specific ones.
      */
-    public Resource getEntry(String key) {
+    public @Nullable Resource getEntry(String key) {
         for (Resource resource : resources) {
             if (resource.get(key) != null) {
                 return resource;

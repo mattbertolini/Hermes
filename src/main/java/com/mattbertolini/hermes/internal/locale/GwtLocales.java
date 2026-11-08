@@ -22,6 +22,7 @@ package com.mattbertolini.hermes.internal.locale;
 import com.google.gwt.i18n.server.GwtLocaleFactoryImpl;
 import com.google.gwt.i18n.shared.GwtLocale;
 import com.google.gwt.i18n.shared.GwtLocaleFactory;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -43,7 +44,7 @@ public final class GwtLocales {
     /**
      * @param localeStr a locale ID, or null/empty for the default locale
      */
-    public static GwtLocale fromString(String localeStr) {
+    public static GwtLocale fromString(@Nullable String localeStr) {
         synchronized (FACTORY) {
             return FACTORY.fromString(localeStr == null || localeStr.isEmpty() ? null : localeStr);
         }

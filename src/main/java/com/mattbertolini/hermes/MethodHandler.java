@@ -19,7 +19,9 @@
 
 package com.mattbertolini.hermes;
 
+import org.jspecify.annotations.Nullable;
+
 @FunctionalInterface
 public interface MethodHandler {
-    Object handle(Object[] args);
+    Object handle(@Nullable Object[] args);
 }

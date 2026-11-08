@@ -23,12 +23,14 @@ import com.google.gwt.i18n.client.ConstantsWithLookup;
 import com.ibm.icu.util.ULocale;
 import com.mattbertolini.hermes.MethodHandler;
 import com.mattbertolini.hermes.ResourceList;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.MissingResourceException;
 
 public class ConstantsWithLookupProxy extends ConstantsProxy {
+    private static final @Nullable Object[] NO_ARGS = new Object[0];
 
     public ConstantsWithLookupProxy(Class<?> clazz, ULocale locale, ResourceList resources) {
         super(clazz, locale, resources);
@@ -42,7 +44,7 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
         return super.createHandler(method);
     }
 
-    private Object lookup(Method lookupMethod, Object[] args) {
+    private Object lookup(Method lookupMethod, @Nullable Object[] args) {
         String name = (String) args[0];
         if (name == null || name.isEmpty()) {
             throw new MissingResourceException("Null or empty method name given.", getI18nClass().getName(), name);
@@ -52,7 +54,7 @@ public class ConstantsWithLookupProxy extends ConstantsProxy {
             throw new MissingResourceException("Property " + name + " is not of type "
                     + lookupMethod.getReturnType().getSimpleName() + ".", getI18nClass().getName(), name);
         }
-        return handlerFor(constantMethod).handle(null);
+        return handlerFor(constantMethod).handle(NO_ARGS);
     }
 
     private Method findConstantMethod(String name) {
