@@ -125,9 +125,9 @@
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <!-- *TestData classes are fixtures, not tests -->
-                    <includes>
-                        <include>**/*Test.java</include>
-                    </includes>
+                    <excludes>
+                        <exclude>**/*TestData.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
