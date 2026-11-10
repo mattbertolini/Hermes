@@ -20,8 +20,10 @@
 # Publish Hermes to Maven Central:
 #
 #   scripts/publish.sh snapshot   publish the current -SNAPSHOT version
-#   scripts/publish.sh release    upload the current release version, then
-#                                 publish it from central.sonatype.com
+#   scripts/publish.sh release    after './mvnw release:prepare', build the
+#                                 tagged release with release:perform and
+#                                 upload it, then publish it from
+#                                 central.sonatype.com
 #
 # Secrets come only from these environment variables, which the caller sets:
 #
@@ -50,21 +52,24 @@ case "$mode" in
     *) usage ;;
 esac
 
+if [ "$mode" = release ]; then
+    # release:prepare leaves release.properties naming the tag to build
+    if [ ! -f release.properties ]; then
+        echo "No release.properties; run './mvnw release:prepare' first" >&2
+        exit 1
+    fi
+    # release:perform passes this settings file on to the build of the tag
+    exec ./mvnw -s .mvn/central-settings.xml -B release:perform
+fi
+
 version="$(./mvnw -q org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate \
     -Dexpression=project.version -DforceStdout)"
 
-case "$mode:$version" in
-    snapshot:*-SNAPSHOT)
-        ;;
-    snapshot:*)
-        echo "Version $version is not a -SNAPSHOT version; use 'scripts/publish.sh release'" >&2
+case "$version" in
+    *-SNAPSHOT) ;;
+    *)
+        echo "Version $version is not a -SNAPSHOT version; release with './mvnw release:prepare' and 'scripts/publish.sh release'" >&2
         exit 1
-        ;;
-    release:*-SNAPSHOT)
-        echo "Version $version is a -SNAPSHOT version; set the release version or use 'scripts/publish.sh snapshot'" >&2
-        exit 1
-        ;;
-    release:*)
         ;;
 esac
 

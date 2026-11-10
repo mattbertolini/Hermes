@@ -87,6 +87,8 @@ Bug Fixes:
 Other:
 * Built with Maven (./mvnw) instead of Ant and Ivy, with code coverage and a
   license header check.
+* Releases are versioned and tagged in git with the Maven release plugin
+  (./mvnw release:prepare, then scripts/publish.sh release).
 * Depends on org.jspecify:jspecify 1.0.1, an annotations-only library with
   no runtime behavior.
 

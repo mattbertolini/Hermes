@@ -51,6 +51,7 @@
         <url>https://github.com/mattbertolini/Hermes</url>
         <connection>scm:git:https://github.com/mattbertolini/Hermes.git</connection>
         <developerConnection>scm:git:git@github.com:mattbertolini/Hermes.git</developerConnection>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
@@ -73,6 +74,7 @@
         <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+        <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
@@ -221,6 +223,17 @@
                 <extensions>true</extensions>
                 <configuration>
                     <publishingServerId>central</publishingServerId>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven-release-plugin.version}</version>
+                <configuration>
+                    <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat>
+                    <releaseProfiles>release</releaseProfiles>
+                    <goals>deploy</goals>
+                    <arguments>-Dgpg.signer=bc</arguments>
                 </configuration>
             </plugin>
         </plugins>

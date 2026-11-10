@@ -6,3 +6,8 @@
 /.idea/
 *.iml
 *.local.toml
+release.properties
+pom.xml.releaseBackup
+pom.xml.next
+pom.xml.tag
+pom.xml.backup
