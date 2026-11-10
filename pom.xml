@@ -22,7 +22,7 @@
 
     <groupId>com.mattbertolini</groupId>
     <artifactId>hermes</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Hermes</name>
@@ -50,7 +50,7 @@
         <url>https://github.com/mattbertolini/Hermes</url>
         <connection>scm:git:https://github.com/mattbertolini/Hermes.git</connection>
         <developerConnection>scm:git:git@github.com:mattbertolini/Hermes.git</developerConnection>
-        <tag>hermes-2.0.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
